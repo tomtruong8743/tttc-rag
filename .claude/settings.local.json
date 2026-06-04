@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ifc-media.bstarsolutions.com)",
+      "Bash(/opt/homebrew/bin/brew install *)"
+    ]
+  }
+}

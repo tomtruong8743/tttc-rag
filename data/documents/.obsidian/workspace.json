@@ -1,0 +1,197 @@
+{
+  "main": {
+    "id": "822fced1d38405e5",
+    "type": "split",
+    "children": [
+      {
+        "id": "d1f6eb06034d8cb7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b9f4cc7e099c5f61",
+            "type": "leaf",
+            "state": {
+              "type": "pdf",
+              "state": {
+                "file": "Nghi_dinh_323_ve_thanh_lap_TTTC.pdf"
+              },
+              "icon": "lucide-file-text",
+              "title": "Nghi_dinh_323_ve_thanh_lap_TTTC"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ae7f3108588592d1",
+    "type": "split",
+    "children": [
+      {
+        "id": "108644630a1e47b7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "eff9d5074b07aa57",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "68eb752ee95554af",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          },
+          {
+            "id": "085de1e0eb1e9613",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "c3a6e0e7cd8ca3ef",
+    "type": "split",
+    "children": [
+      {
+        "id": "ed7af58fd546a66b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3a1ba1d675ba67fe",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "f9d7c167b5d13f32",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "03613da40472807b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "ab99b8bc3dcddbef",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "d5a6bdb98efcd0b4",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Untitled.canvas",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Untitled"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "translate:Open translation view": false
+    }
+  },
+  "active": "b9f4cc7e099c5f61",
+  "lastOpenFiles": [
+    "Untitled 1.canvas",
+    "2026-06-04.md",
+    "Nghi_dinh_324_ve_chinh_sach_tai_chinh_trong_TTTC.pdf",
+    "Nghi_dinh_327_ve_chinh_sach_xuat_nhap_canh_trong_TTTC.pdf",
+    "Nghi_dinh_330_ve_thanh_lap_va_hoat_dong_cua_So_giao_dich_hang_hoa_trong_TTTC.pdf",
+    "Untitled.canvas",
+    "2026-06-03.md",
+    "Nghi_dinh_328_ve_Trung_tam_trong_tai_quoc_te_thuoc_TTTC.pdf",
+    "Nghi_dinh_325_ve_lao_dong_viec_lam_va_an_sinh_XH_trong_TTTC.pdf",
+    "Nghi_dinh_323_ve_thanh_lap_TTTC.pdf"
+  ]
+}

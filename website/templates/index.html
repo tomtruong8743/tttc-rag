@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIFC Knowledge Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* ── Language Toggle — matches vifc.gov.vn style ── */
+    .lang-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s, transform 0.15s;
+      opacity: 0.5;
+      position: relative;
+    }
+    .lang-btn img {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .lang-btn.active {
+      opacity: 1;
+    }
+    .lang-btn.active img {
+      box-shadow: 0 0 0 2px white, 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .lang-btn:hover { opacity: 0.85; transform: scale(1.08); }
+    .lang-btn.active:hover { transform: scale(1.05); }
+
+    /* Divider between flags */
+    .lang-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255,255,255,0.35);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <a class="logo" href="/">
+        <div class="logo-icon">VIFC</div>
+        <div class="logo-text">
+          Vietnam International
+          <span>Financial Centre</span>
+        </div>
+      </a>
+      <!-- Language toggle — right of logo, flag-only style matching vifc.gov.vn -->
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-en" onclick="setLang('en')" title="English">
+          <img src="https://flagcdn.com/w40/gb.png" alt="English" />
+        </button>
+        <div class="lang-divider"></div>
+        <button class="lang-btn" id="btn-vi" onclick="setLang('vi')" title="Tiếng Việt">
+          <img src="https://flagcdn.com/w40/vn.png" alt="Tiếng Việt" />
+        </button>
+      </div>
+    </div>
+    <nav>
+      <a href="https://vifc.gov.vn/vi/policy" target="_blank" data-i18n="nav_policy">Policy</a>
+      <a href="https://vifc.gov.vn" target="_blank" data-i18n="nav_official">Official Site</a>
+      <a href="/upload" data-i18n="nav_upload">Submit Document</a>
+      <a href="#" class="active" data-i18n="nav_assistant">Knowledge Assistant</a>
+    </nav>
+  </header>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <h1 data-i18n="hero_title">VIFC Knowledge Assistant</h1>
+    <p data-i18n="hero_sub">Ask any question about the Vietnam International Financial Centre. All answers are sourced directly from official legal documents and decrees.</p>
+  </div>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <!-- Chat window -->
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="dot"></div>
+        <span data-i18n="chat_header">AI Assistant — Powered by official VIFC documents</span>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <div class="message bot">
+          <div class="avatar">AI</div>
+          <div class="bubble" id="welcome-msg">
+            Xin chào! Hello! I'm the VIFC Knowledge Assistant.<br><br>
+            I can answer questions about the <strong>Vietnam International Financial Centre</strong> — including its legal framework, tax incentives, investment opportunities, banking regulations, and more.<br><br>
+            All answers are drawn exclusively from official decrees and legal documents. How can I help you?
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea
+          id="user-input"
+          rows="1"
+          data-i18n-placeholder="input_placeholder"
+          placeholder="Ask a question about VIFC... (Press Enter to send)"
+        ></textarea>
+        <button id="send-btn" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Suggested questions -->
+    <div class="suggestions">
+      <h3 data-i18n="suggestions_title">Suggested Questions</h3>
+      <div class="suggestion-grid" id="suggestion-grid"></div>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <strong>VIFC Knowledge Assistant</strong> — <span data-i18n="footer_note">Answers sourced exclusively from official legal documents.</span><br>
+    <span data-i18n="footer_disclaimer">This tool is for informational purposes only. For official guidance visit</span>
+    <a href="https://vifc.gov.vn" target="_blank">vifc.gov.vn</a>.<br><br>
+    2026 © Vietnam International Financial Centre
+  </footer>
+
+  <!-- ── Admin floating button ── -->
+  <div id="admin-fab-container">
+
+    <!-- Login popup -->
+    <div id="admin-popup" style="display:none;">
+      <div id="admin-popup-title">🔒 Admin Login</div>
+      <input type="password" id="admin-pw-input" placeholder="Enter admin password" />
+      <div id="admin-pw-error"></div>
+      <button id="admin-pw-submit">Log In</button>
+    </div>
+
+    <!-- The floating button -->
+    <button id="admin-fab" onclick="handleFab()">🔒 Admin</button>
+  </div>
+
+  <style>
+    #admin-fab-container {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    #admin-fab {
+      background: var(--navy);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(28,47,114,0.35);
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    #admin-fab:hover    { background: #162460; }
+    #admin-fab:active   { transform: scale(0.96); }
+    #admin-fab.unlocked { background: var(--grad); }
+
+    #admin-popup {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(28,47,114,0.18);
+      padding: 18px 20px;
+      width: 240px;
+      animation: popIn 0.18s ease;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    #admin-popup-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+
+    #admin-pw-input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      color: var(--text);
+    }
+    #admin-pw-input:focus { border-color: var(--blue); }
+
+    #admin-pw-error {
+      font-size: 12px;
+      color: #b91c1c;
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    #admin-pw-submit {
+      margin-top: 10px;
+      width: 100%;
+      background: var(--grad);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #admin-pw-submit:hover { opacity: 0.9; }
+  </style>
+
+  <script src="/static/chat.js"></script>
+  <script>
+    // ── Translations ──────────────────────────────────────────────
+    const STRINGS = {
+      en: {
+        hero_title:       "VIFC Knowledge Assistant",
+        hero_sub:         "Ask any question about the Vietnam International Financial Centre. All answers are sourced directly from official legal documents and decrees.",
+        chat_header:      "AI Assistant — Powered by official VIFC documents",
+        welcome_msg:      `Xin chào! Hello! I'm the VIFC Knowledge Assistant.<br><br>I can answer questions about the <strong>Vietnam International Financial Centre</strong> — including its legal framework, tax incentives, investment opportunities, banking regulations, and more.<br><br>All answers are drawn exclusively from official decrees and legal documents. How can I help you?`,
+        input_placeholder:"Ask a question about VIFC... (Press Enter to send)",
+        suggestions_title:"Suggested Questions",
+        nav_policy:       "Policy",
+        nav_official:     "Official Site",
+        nav_upload:       "Submit Document",
+        nav_assistant:    "Knowledge Assistant",
+        footer_note:      "Answers sourced exclusively from official legal documents.",
+        footer_disclaimer:"This tool is for informational purposes only. For official guidance visit",
+        suggestions: [
+          ["What is the Vietnam International Financial Centre?",          "What is the Vietnam International Financial Centre?"],
+          ["What tax incentives are available in the VIFC?",               "What tax incentives are available in the VIFC?"],
+          ["What banking activities are allowed in VIFC?",                 "What banking activities are allowed in VIFC?"],
+          ["What are the main decrees related to VIFC?",                   "What are the main decrees related to VIFC?"],
+          ["What opportunities exist for foreign investors in VIFC?",      "What opportunities exist for foreign investors in VIFC?"],
+          ["What are the foreign exchange rules in VIFC?",                 "What are the foreign exchange rules in VIFC?"],
+          ["How are disputes resolved in VIFC?",                           "How are disputes resolved in VIFC?"],
+          ["What capital markets activities are allowed in VIFC?",         "What capital markets activities are allowed in VIFC?"],
+        ]
+      },
+      vi: {
+        hero_title:       "Trợ lý Tri thức VIFC",
+        hero_sub:         "Đặt câu hỏi về Trung tâm Tài chính Quốc tế Việt Nam. Tất cả câu trả lời đều được trích dẫn từ các văn bản pháp lý và nghị định chính thức.",
+        chat_header:      "Trợ lý AI — Được hỗ trợ bởi tài liệu chính thức của VIFC",
+        welcome_msg:      `Xin chào! Tôi là Trợ lý Tri thức VIFC.<br><br>Tôi có thể trả lời các câu hỏi về <strong>Trung tâm Tài chính Quốc tế Việt Nam</strong> — bao gồm khung pháp lý, ưu đãi thuế, cơ hội đầu tư, quy định ngân hàng và nhiều hơn nữa.<br><br>Tất cả câu trả lời đều dựa hoàn toàn vào các nghị định và văn bản pháp luật chính thức. Tôi có thể giúp gì cho bạn?`,
+        input_placeholder:"Đặt câu hỏi về VIFC... (Nhấn Enter để gửi)",
+        suggestions_title:"Câu hỏi gợi ý",
+        nav_policy:       "Chính sách",
+        nav_official:     "Trang chính thức",
+        nav_upload:       "Nộp tài liệu",
+        nav_assistant:    "Trợ lý Tri thức",
+        footer_note:      "Câu trả lời được trích dẫn hoàn toàn từ tài liệu pháp lý chính thức.",
+        footer_disclaimer:"Công cụ này chỉ mang tính chất thông tin. Để được hướng dẫn chính thức, truy cập",
+        suggestions: [
+          ["Trung tâm Tài chính Quốc tế Việt Nam là gì?",                  "What is the Vietnam International Financial Centre?"],
+          ["Những ưu đãi thuế nào có sẵn tại VIFC?",                       "What tax incentives are available in the VIFC?"],
+          ["Những hoạt động ngân hàng nào được phép tại VIFC?",            "What banking activities are allowed in VIFC?"],
+          ["Các nghị định chính liên quan đến VIFC là gì?",                "What are the main decrees related to VIFC?"],
+          ["Cơ hội nào dành cho nhà đầu tư nước ngoài tại VIFC?",         "What opportunities exist for foreign investors in VIFC?"],
+          ["Quy định ngoại hối tại VIFC là gì?",                           "What are the foreign exchange rules in VIFC?"],
+          ["Tranh chấp được giải quyết như thế nào tại VIFC?",             "How are disputes resolved in VIFC?"],
+          ["Những hoạt động thị trường vốn nào được cho phép tại VIFC?",  "What capital markets activities are allowed in VIFC?"],
+        ]
+      }
+    };
+
+    let currentLang = localStorage.getItem('vifc_lang') || 'en';
+
+    function setLang(lang) {
+      currentLang = lang;
+      localStorage.setItem('vifc_lang', lang);
+
+      const t = STRINGS[lang];
+
+      // Nav & static text
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+      });
+
+      // Placeholders
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key]) el.placeholder = t[key];
+      });
+
+      // Welcome message (HTML)
+      const wm = document.getElementById('welcome-msg');
+      if (wm) wm.innerHTML = t.welcome_msg;
+
+      // Suggestion buttons
+      const grid = document.getElementById('suggestion-grid');
+      grid.innerHTML = '';
+      t.suggestions.forEach(([label, query]) => {
+        const btn = document.createElement('button');
+        btn.className = 'suggestion-btn';
+        btn.dataset.q = query;
+        btn.textContent = label;
+        btn.addEventListener('click', () => sendMessage(query));
+        grid.appendChild(btn);
+      });
+
+      // Toggle buttons
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+      document.getElementById('btn-vi').classList.toggle('active', lang === 'vi');
+
+      document.documentElement.lang = lang;
+    }
+
+    // Init on load
+    setLang(currentLang);
+
+    // ── Admin FAB ─────────────────────────────────────────────────
+    let adminUnlocked = false;
+    const fab       = document.getElementById('admin-fab');
+    const popup     = document.getElementById('admin-popup');
+    const pwInput   = document.getElementById('admin-pw-input');
+    const pwError   = document.getElementById('admin-pw-error');
+    const pwSubmit  = document.getElementById('admin-pw-submit');
+
+    function handleFab() {
+      if (adminUnlocked) {
+        window.location.href = '/admin/review';
+      } else {
+        const visible = popup.style.display !== 'none';
+        popup.style.display = visible ? 'none' : 'block';
+        if (!visible) { pwInput.value = ''; pwError.textContent = ''; pwInput.focus(); }
+      }
+    }
+
+    // Close popup when clicking outside
+    document.addEventListener('click', e => {
+      if (!document.getElementById('admin-fab-container').contains(e.target)) {
+        popup.style.display = 'none';
+      }
+    });
+
+    // Submit on Enter
+    pwInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); submitPassword(); }
+    });
+    pwSubmit.addEventListener('click', submitPassword);
+
+    async function submitPassword() {
+      const pw = pwInput.value.trim();
+      if (!pw) return;
+
+      const res = await fetch('/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        adminUnlocked = true;
+        popup.style.display = 'none';
+        fab.textContent = '📂 Uploaded Documents';
+        fab.classList.add('unlocked');
+      } else {
+        pwError.textContent = 'Incorrect password.';
+        pwInput.value = '';
+        pwInput.focus();
+      }
+    }
+  </script>
+</body>
+</html>

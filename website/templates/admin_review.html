@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review Documents — VIFC Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .admin-header h2 { color: var(--navy); font-size: 22px; }
+    .logout-btn {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover { border-color: #fca5a5; color: #b91c1c; }
+
+    .message-box {
+      background: #e8f8ef;
+      border: 1.5px solid #7dd6a8;
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #1a6640;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .empty-state {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 15px; }
+
+    .doc-card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 10px rgba(28,47,114,0.06);
+      padding: 22px 26px;
+      margin-bottom: 16px;
+    }
+
+    .doc-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .doc-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+
+    .doc-meta {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .doc-meta strong { color: var(--text); }
+
+    .doc-description {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: var(--light-bg);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+      border-left: 3px solid var(--cyan);
+    }
+
+    .doc-actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+    .approve-btn, .reject-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s;
+    }
+
+    .approve-btn {
+      background: var(--grad);
+      color: white;
+    }
+
+    .reject-btn {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1.5px solid #fca5a5;
+    }
+
+    .approve-btn:hover, .reject-btn:hover { opacity: 0.85; }
+
+    .badge {
+      display: inline-block;
+      background: #fff7e6;
+      color: #b45309;
+      border: 1px solid #fcd34d;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    .stats-bar {
+      background: var(--navy);
+      color: white;
+      border-radius: 12px;
+      padding: 14px 22px;
+      display: flex;
+      gap: 28px;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    .stats-bar span { opacity: 0.75; font-size: 12px; display: block; }
+    .stats-bar strong { font-size: 22px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="logo" href="/">
+      <div class="logo-icon">VIFC</div>
+      <div class="logo-text">Vietnam International <span>Financial Centre</span></div>
+    </a>
+    <nav>
+      <a href="/">Knowledge Assistant</a>
+      <a href="/upload">Submit Document</a>
+      <a href="/admin/review" class="active">Admin</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>Document Review</h1>
+    <p>Review, approve, or reject submitted documents. Approved documents are immediately ingested into the knowledge base.</p>
+  </div>
+
+  <main>
+
+    {% set msg = request.query_params.get('message') %}
+    {% if msg %}
+    <div class="message-box">✅ {{ msg }}</div>
+    {% endif %}
+
+    <div class="admin-header">
+      <h2>
+        Pending Documents
+        {% if pending_files %}
+        <span class="badge">{{ pending_files|length }} pending</span>
+        {% endif %}
+      </h2>
+      <a href="/admin/logout" class="logout-btn">Log out</a>
+    </div>
+
+    {% if pending_files %}
+
+    <div class="stats-bar">
+      <div><strong>{{ pending_files|length }}</strong><span>Pending review</span></div>
+    </div>
+
+    {% for doc in pending_files %}
+    <div class="doc-card">
+      <div class="doc-top">
+        <div>
+          <div class="doc-name">📄 {{ doc.original_name }}</div>
+          <div class="doc-meta">
+            <strong>Submitted by:</strong> {{ doc.submitter_name or 'Anonymous' }}
+            {% if doc.submitter_email %} — {{ doc.submitter_email }}{% endif %}<br>
+            <strong>Date:</strong> {{ doc.submitted_at[:19].replace('T', ' ') if doc.submitted_at else 'Unknown' }}<br>
+            <strong>Size:</strong> {{ doc.size_kb }} KB &nbsp;|&nbsp;
+            <strong>Stored as:</strong> <code>{{ doc.filename }}</code>
+          </div>
+          {% if doc.description %}
+          <div class="doc-description">{{ doc.description }}</div>
+          {% endif %}
+        </div>
+        <div class="doc-actions">
+          <form method="post" action="/admin/approve" onsubmit="return confirm('Approve and ingest this document?')">
+            <input type="hidden" name="filename" value="{{ doc.filename }}">
+            <button type="submit" class="approve-btn">✅ Approve</button>
+          </form>
+          <form method="post" action="/admin/reject" onsubmit="return confirm('Reject and remove this document?')">
+            <input type="hidden" name="filename" value="{{ doc.filename }}">
+            <button type="submit" class="reject-btn">❌ Reject</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📭</div>
+      <p>No documents pending review.</p>
+    </div>
+    {% endif %}
+
+  </main>
+
+  <footer>
+    <strong>VIFC Admin Panel</strong> — Restricted access.<br>
+    2026 © Vietnam International Financial Centre
+  </footer>
+
+</body>
+</html>

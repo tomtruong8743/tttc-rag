@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — VIFC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body { justify-content: center; align-items: center; }
+    .login-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(28,47,114,0.13);
+      border: 1px solid var(--border);
+      padding: 44px 48px;
+      width: 100%;
+      max-width: 400px;
+      margin: 60px auto;
+    }
+    .login-card .lock { font-size: 40px; text-align: center; margin-bottom: 16px; }
+    .login-card h2 {
+      color: var(--navy);
+      font-size: 22px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .login-card p {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .form-group { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    input[type="password"] {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="password"]:focus { border-color: var(--blue); }
+    .login-btn {
+      background: var(--grad);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      font-family: inherit;
+      transition: opacity 0.2s;
+    }
+    .login-btn:hover { opacity: 0.9; }
+    .error-box {
+      background: #fef2f2;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #b91c1c;
+      font-size: 13px;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--blue); }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="lock">🔒</div>
+    <h2>Admin Access</h2>
+    <p>Enter the admin password to review submitted documents.</p>
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/admin/login">
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Enter admin password" autofocus required>
+      </div>
+      <button type="submit" class="login-btn">Log In</button>
+    </form>
+
+    <a class="back-link" href="/">← Back to Knowledge Assistant</a>
+  </div>
+
+</body>
+</html>
