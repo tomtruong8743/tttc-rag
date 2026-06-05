@@ -9,6 +9,10 @@ Flow for every question:
 Usage:
     python answer.py "What is X?"
     python answer.py "What is X?" --top-k 8
+
+Backend selection:
+    export LLM_BACKEND=anthropic   # default, requires ANTHROPIC_API_KEY
+    export LLM_BACKEND=ollama      # free, requires Ollama running locally
 """
 
 import argparse
@@ -17,46 +21,35 @@ import subprocess
 import sys
 from pathlib import Path
 
-import anthropic
+import llm_client
 from retrieval import retrieve, format_citation
 from wiki_writer import save_wiki_page, WIKI_DIR
 
-# Override with CLAUDE_MODEL env var to use a cheaper model e.g. claude-haiku-4-5
-MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 MAX_CONTEXT_CHARS = 40_000
-WIKI_PUSH_ENABLED = True   # set False to skip git push
+WIKI_PUSH_ENABLED = True
 
 
 # ── Wiki search ───────────────────────────────────────────────────
 
 def find_relevant_wiki(question: str):
-    """
-    Search all wiki pages for one relevant to the question.
-    Uses the LLM to pick the best match from page titles, then returns
-    (path, content) if a good match is found, else None.
-    """
     pages = [p for p in WIKI_DIR.glob("**/*.md") if p.name != ".gitkeep" and p.stat().st_size > 100]
     if not pages:
         return None
 
-    # Build a numbered list of titles for the LLM to choose from
     titles = [p.stem.replace("_", " ").title() for p in pages]
     numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(titles))
 
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=64,
+    choice = llm_client.chat(
         system="You are a search assistant. Reply with only a number or 'none'.",
-        messages=[{"role": "user", "content":
+        user=(
             f"Question: {question}\n\n"
             f"Which of these wiki pages is most relevant to answer this question?\n\n"
             f"{numbered}\n\n"
             f"Reply with just the number (e.g. '3') if one is clearly relevant, "
             f"or 'none' if no page is a good match."
-        }],
-    )
-    choice = response.content[0].text.strip().lower()
+        ),
+        max_tokens=64,
+    ).strip().lower()
 
     if choice == "none":
         return None
@@ -64,8 +57,7 @@ def find_relevant_wiki(question: str):
         idx = int(choice) - 1
         if 0 <= idx < len(pages):
             path = pages[idx]
-            content = path.read_text(encoding="utf-8")
-            return path, content
+            return path, path.read_text(encoding="utf-8")
     except ValueError:
         pass
     return None
@@ -74,7 +66,6 @@ def find_relevant_wiki(question: str):
 # ── GitHub push ───────────────────────────────────────────────────
 
 def push_wiki_to_github(page_path: Path):
-    """Commit and push a newly created wiki page to GitHub."""
     wiki_dir = str(WIKI_DIR)
     try:
         subprocess.run(["git", "add", str(page_path)], cwd=wiki_dir, check=True, capture_output=True)
@@ -90,7 +81,7 @@ def push_wiki_to_github(page_path: Path):
 
 # ── Context builders ──────────────────────────────────────────────
 
-def build_chunk_context(chunks: list[dict]) -> str:
+def build_chunk_context(chunks: list) -> str:
     parts = []
     for i, chunk in enumerate(chunks, start=1):
         parts.append(f"[{i}] Source: {format_citation(chunk)}\n{chunk['text'].strip()}")
@@ -101,7 +92,7 @@ def build_wiki_context(wiki_path: Path, wiki_content: str) -> str:
     return f"[1] Source: Wiki — {wiki_path.stem.replace('_', ' ').title()}\n{wiki_content}"
 
 
-# ── Prompts ───────────────────────────────────────────────────────
+# ── Prompt ────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """\
 You are a detailed legal and policy research assistant. You are given source excerpts \
@@ -133,21 +124,15 @@ Rules:
 # ── Main pipeline ─────────────────────────────────────────────────
 
 def generate_answer(question: str, top_k: int = 15) -> dict:
-    """
-    Returns {answer, chunks, wiki_path, wiki_created}.
-    """
-    # Step 1: check for an existing relevant wiki page
     wiki_result = find_relevant_wiki(question)
     wiki_path = None
     wiki_created = False
 
-    # Always retrieve raw chunks — these contain the full document detail
     chunks = retrieve(question, top_k=top_k)
 
     if wiki_result:
         wiki_path, wiki_content = wiki_result
         print(f"[answer] Found existing wiki: {wiki_path.name}")
-        wiki_created = False
         source_label = f"Wiki: {wiki_path.stem.replace('_', ' ').title()}"
     else:
         if not chunks:
@@ -165,28 +150,21 @@ def generate_answer(question: str, top_k: int = 15) -> dict:
         wiki_content = wiki_path.read_text(encoding="utf-8")
         source_label = f"Wiki: {wiki_path.stem.replace('_', ' ').title()} (newly created)"
 
-    # Build context: raw chunks first (full detail), then wiki as structure reference
     if chunks:
         chunk_context = build_chunk_context(chunks)
         wiki_header = f"\n\n---\n\n[WIKI SUMMARY for reference]\n{wiki_content[:3000]}"
         context = chunk_context + wiki_header
     else:
-        # No chunks (shouldn't happen but fallback to wiki only)
         context = build_wiki_context(wiki_path, wiki_content)
 
     if len(context) > MAX_CONTEXT_CHARS:
         context = context[:MAX_CONTEXT_CHARS] + "\n\n[context truncated]"
 
-    user_message = f"Source content:\n\n{context}\n\nQuestion: {question}"
-
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
+    answer = llm_client.chat(
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
+        user=f"Source content:\n\n{context}\n\nQuestion: {question}",
+        max_tokens=4096,
     )
-    answer = response.content[0].text.strip()
 
     return {
         "answer": answer,
@@ -203,11 +181,13 @@ def main():
     parser.add_argument("--top-k", type=int, default=8)
     args = parser.parse_args()
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("[error] ANTHROPIC_API_KEY is not set.")
+    backend = llm_client.LLM_BACKEND
+    if backend == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
+        print("[error] ANTHROPIC_API_KEY is not set. Set LLM_BACKEND=ollama to use free local model.")
         sys.exit(1)
 
-    print(f"\nQuestion: {args.question}\n{'─' * 60}")
+    print(f"\nBackend: {llm_client.backend_info()}")
+    print(f"Question: {args.question}\n{'─' * 60}")
     result = generate_answer(args.question, top_k=args.top_k)
 
     print(f"\nAnswer:\n{result['answer']}")

@@ -20,7 +20,7 @@ import re
 import sys
 from pathlib import Path
 
-import anthropic
+import llm_client
 
 from retrieval import retrieve, format_citation
 from answer import generate_answer
@@ -50,20 +50,10 @@ def check_citations(text: str) -> bool:
     return bool(re.search(r"\[\d+\]", text))
 
 
-def client() -> anthropic.Anthropic:
-    return anthropic.Anthropic()
-
-
 def llm_judge(prompt: str) -> dict:
-    """Send a judging prompt to Claude and parse the JSON response."""
+    """Send a judging prompt to the LLM and parse the JSON response."""
     import json
-    response = client().messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=256,
-        system=JUDGE_SYSTEM,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = response.content[0].text.strip()
+    raw = llm_client.chat(system=JUDGE_SYSTEM, user=prompt, max_tokens=256)
     try:
         return json.loads(raw)
     except Exception:

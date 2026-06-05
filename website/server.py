@@ -297,9 +297,11 @@ async def admin_reject(request: Request, filename: str = Form(...)):
 
 
 if __name__ == "__main__":
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("[error] ANTHROPIC_API_KEY is not set.")
+    import llm_client
+    if llm_client.LLM_BACKEND == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
+        print("[error] ANTHROPIC_API_KEY is not set. Use LLM_BACKEND=ollama for free local inference.")
         sys.exit(1)
+    print(f"[info] LLM backend: {llm_client.backend_info()}")
     print(f"[info] Admin password: {ADMIN_PASSWORD}")
     print(f"[info] Set ADMIN_PASSWORD env var to change it.")
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True,

@@ -14,10 +14,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
-import anthropic
+import llm_client
 from retrieval import retrieve, format_citation
-
-MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 WIKI_DIR = Path("wiki")
 MAX_CONTEXT_CHARS = 12_000
 
@@ -136,15 +134,7 @@ def generate_wiki_page(topic: str, chunks: list[dict]) -> str:
 
     prompt = GENERATE_PROMPT.format(topic=topic, known_pages=get_known_pages())
     user_message = f"Source excerpts:\n\n{context}\n\nWrite the wiki page now."
-
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
-        system=prompt,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    return response.content[0].text.strip()
+    return llm_client.chat(system=prompt, user=user_message, max_tokens=2048)
 
 
 
@@ -159,15 +149,7 @@ def update_wiki_page(topic: str, existing_body: str, chunks: list[dict]) -> str:
         f"---\n\nNew source excerpts:\n\n{context}\n\n"
         f"Write the updated wiki page now."
     )
-
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
-        system=system,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    return response.content[0].text.strip()
+    return llm_client.chat(system=system, user=user_message, max_tokens=2048)
 
 
 def save_wiki_page(topic: str, chunks: list[dict], folder: str = "inbox") -> Path:
