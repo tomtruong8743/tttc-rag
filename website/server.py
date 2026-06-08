@@ -301,7 +301,10 @@ async def admin_reject(request: Request, filename: str = Form(...)):
 if __name__ == "__main__":
     import llm_client
     if llm_client.LLM_BACKEND == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        print("[error] ANTHROPIC_API_KEY is not set. Use LLM_BACKEND=ollama for free local inference.")
+        print("[error] ANTHROPIC_API_KEY is not set. Set LLM_BACKEND=gemini and GEMINI_API_KEY for free usage.")
+        sys.exit(1)
+    if llm_client.LLM_BACKEND == "gemini" and not os.environ.get("GEMINI_API_KEY"):
+        print("[error] GEMINI_API_KEY is not set. Get a free key at https://aistudio.google.com/app/apikey")
         sys.exit(1)
     print(f"[info] LLM backend: {llm_client.backend_info()}")
     print(f"[info] Admin password: {ADMIN_PASSWORD}")
