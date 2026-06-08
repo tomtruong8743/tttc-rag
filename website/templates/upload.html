@@ -342,8 +342,9 @@
           if (data.download_url) {
             let fixDetail = '';
             if (data.fixed_count > 0) fixDetail += ` ${data.fixed_count} element(s) corrected`;
-            if (data.n_dash > 0)      fixDetail += `, ${data.n_dash} dash(es) normalised`;
+            if (data.n_inserted > 0)  fixDetail += `, ${data.n_inserted} missing line(s) inserted`;
             if (data.n_line > 0)      fixDetail += `, ${data.n_line} line weight(s) fixed`;
+            if (data.n_dash > 0)      fixDetail += `, ${data.n_dash} dash(es) normalised`;
             summary += `<br><br>🔧 <strong>Auto-fixed:${fixDetail || ' no auto-fixable errors found'}</strong><br><a class="download-link" href="${data.download_url}" download>⬇️ Download Fixed File</a>`;
             fmtResult.className = 'format-result success';
           } else if (data.fix_error) {

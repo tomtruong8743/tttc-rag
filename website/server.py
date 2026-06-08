@@ -304,6 +304,45 @@ import tempfile
 import subprocess as _sp
 from fastapi.responses import FileResponse
 
+
+def _insert_missing_line(doc, para_index: int, length_pt: float, weight_pt: float = 0.75):
+    """Insert a VML horizontal line shape into the paragraph AFTER para_index."""
+    from lxml import etree
+    from docx_format import q, V
+
+    # Build a new paragraph with a VML line shape
+    length_str = f"{length_pt:.0f}pt"
+    weight_str = f"{weight_pt}pt"
+
+    vml_ns  = "urn:schemas-microsoft-com:vml"
+    w_ns    = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    o_ns    = "urn:schemas-microsoft-com:office:office"
+
+    # Create the paragraph element
+    new_p = etree.fromstring(f"""
+<w:p xmlns:w="{w_ns}" xmlns:v="{vml_ns}" xmlns:o="{o_ns}">
+  <w:pPr>
+    <w:jc w:val="center"/>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+  </w:pPr>
+  <w:r>
+    <w:pict>
+      <v:line
+        xmlns:v="{vml_ns}"
+        style="position:absolute;left:0;text-align:left;z-index:251659264;mso-wrap-edited:f;mso-width-percent:0;mso-height-percent:0;mso-width-percent:0;mso-height-percent:0"
+        from="0,0" to="{length_str},0"
+        strokeweight="{weight_str}">
+        <v:stroke joinstyle="miter"/>
+      </v:line>
+    </w:pict>
+  </w:r>
+</w:p>""")
+
+    # Insert after the anchor paragraph
+    anchor_el = doc.p_elements[para_index]
+    anchor_el.addnext(new_p)
+    return new_p
+
 def _run_format_check(docx_path: Path) -> dict:
     """Run the thể thức checker by importing directly (avoids subprocess PATH issues)."""
     out_dir   = Path(tempfile.mkdtemp())
@@ -423,9 +462,32 @@ def _run_format_fix(docx_path: Path) -> dict:
                                   bold=bold, italic=italic,
                                   caps=caps if caps else None, color="000000")
 
-        # Fix dashes and line weights
+        # Fix dashes and existing line weights
         n_dash = FX.fix_dashes(doc)
         n_line = FX.fix_lines(doc, det, spec)
+
+        # Insert MISSING lines (fix_thethuc only adjusts existing ones)
+        from docx_format import estimate_text_width_pt
+        n_inserted = 0
+        line_specs = [it for it in spec["mau_chu"] if it.get("kiem_tra") == "duong_ke"]
+        for item in line_specs:
+            anchor_key = item.get("duoi")
+            anchor = det.found.get(anchor_key)
+            if anchor is None or anchor.index is None:
+                continue
+            shapes, _ = doc.lines_near(anchor.index, lookahead=2)
+            if shapes:
+                continue  # line already exists — fix_lines handled it
+            # Line is missing — calculate appropriate length and insert
+            run  = anchor.dominant_run()
+            size = run.size if (run and run.size) else 13.0
+            text_width = estimate_text_width_pt(anchor.text, size)
+            if not text_width:
+                text_width = 150.0
+            ratio = (item.get("ti_le_min", 0.9) + item.get("ti_le_max", 1.0)) / 2
+            length_pt = round(text_width * ratio, 1)
+            _insert_missing_line(doc, anchor.index, length_pt, weight_pt=0.75)
+            n_inserted += 1
 
         # Save fixed docx
         import zipfile as _zf, shutil as _sh
@@ -449,6 +511,7 @@ def _run_format_fix(docx_path: Path) -> dict:
             "fixed_keys":  sorted(set(fixed_keys)),
             "n_dash":      n_dash,
             "n_line":      n_line,
+            "n_inserted":  n_inserted,
         }
     except Exception as e:
         import traceback
