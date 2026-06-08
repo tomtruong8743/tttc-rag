@@ -171,6 +171,7 @@ async def upload_document(
 async def ingest_direct(file: UploadFile = File(...)):
     """Direct ingest endpoint — skips admin review and ingests immediately into ChromaDB."""
     import chromadb
+    from chromadb.utils import embedding_functions
 
     suffix = Path(file.filename).suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
@@ -185,17 +186,13 @@ async def ingest_direct(file: UploadFile = File(...)):
         tmp_path = Path(tempfile.gettempdir()) / file.filename
         tmp_path.write_bytes(contents)
 
-        # Extract and chunk text
-        text = extract_text(str(tmp_path))
-        if not text.strip():
+        # Extract text (returns list of dicts with text and page info)
+        pages = extract_text(tmp_path)
+        if not pages:
+            tmp_path.unlink(missing_ok=True)
             return JSONResponse({"error": "No text extracted from file."}, status_code=400)
 
-        chunks = chunk_text(text)
-        if not chunks:
-            return JSONResponse({"error": "Could not chunk text."}, status_code=400)
-
-        # Embed and store directly in ChromaDB
-        from chromadb.utils import embedding_functions
+        # Initialize ChromaDB
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
         collection = client.get_or_create_collection(
             name=COLLECTION_NAME,
@@ -204,10 +201,27 @@ async def ingest_direct(file: UploadFile = File(...)):
             )
         )
 
-        # Add chunks with metadata
-        ids = [f"{file.filename}_{i}" for i in range(len(chunks))]
-        metadatas = [{"source": file.filename, "chunk": i} for i in range(len(chunks))]
-        collection.add(ids=ids, documents=chunks, metadatas=metadatas)
+        # Process each page and chunk
+        total_chunks = 0
+        chunk_index = 0
+        for page_data in pages:
+            for chunk in chunk_text(page_data["text"]):
+                if not chunk.strip():
+                    continue
+
+                doc_id = f"{file.filename}__p{page_data['page']}__c{chunk_index}"
+                metadata = {
+                    "source": file.filename,
+                    "page": str(page_data["page"]) if page_data["page"] else "N/A",
+                    "chunk_index": chunk_index,
+                }
+                collection.upsert(
+                    ids=[doc_id],
+                    documents=[chunk],
+                    metadatas=[metadata],
+                )
+                chunk_index += 1
+                total_chunks += 1
 
         # Cleanup
         tmp_path.unlink(missing_ok=True)
@@ -215,11 +229,13 @@ async def ingest_direct(file: UploadFile = File(...)):
         return JSONResponse({
             "success": True,
             "filename": file.filename,
-            "chunks_ingested": len(chunks),
-            "message": f"✅ {file.filename} ingested directly ({len(chunks)} chunks). Ready to query immediately."
+            "chunks_ingested": total_chunks,
+            "message": f"✅ {file.filename} ingested directly ({total_chunks} chunks). Ready to query immediately."
         })
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"error": f"Ingest failed: {str(e)}"}, status_code=500)
 
 
