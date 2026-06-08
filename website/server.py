@@ -51,7 +51,7 @@ ALLOWED_EXTENSIONS  = {".pdf", ".docx", ".txt", ".md"}
 MAX_FILE_SIZE_MB    = 20
 ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD", "vifc-admin-2026")
 
-app = FastAPI(title="VIFC Knowledge Assistant")
+app = FastAPI(title="VIFC Knowledge Assistant - v2")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "vifc-secret-key-change-me"))
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
