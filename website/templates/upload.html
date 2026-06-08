@@ -150,7 +150,7 @@
       {% endif %}
 
       <h2>Upload a Document</h2>
-      <p class="subtitle">Accepted formats: PDF, DOCX, TXT, Markdown. Maximum size: 20MB.<br>
+      <p class="subtitle">Accepted formats: PDF, DOCX, TXT, Markdown. Maximum size: 500MB.<br>
       Your document will be reviewed by an administrator before being added to the database.</p>
 
       <div class="info-box">
@@ -168,7 +168,7 @@
           <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
             <div class="icon">📄</div>
             <p><strong>Click to browse</strong> or drag and drop your file here</p>
-            <p>PDF, DOCX, TXT, Markdown — max 20MB</p>
+            <p>PDF, DOCX, TXT, Markdown — max 500MB</p>
             <div class="file-selected" id="file-label"></div>
             <input type="file" id="file-input" name="file" accept=".pdf,.docx,.txt,.md" required>
           </div>
@@ -200,6 +200,89 @@
     2026 © Vietnam International Financial Centre
   </footer>
 
+  <!-- ── Admin floating button ── -->
+  <div id="admin-fab-container">
+    <div id="admin-popup" style="display:none;">
+      <div id="admin-popup-title">🔒 Admin Login</div>
+      <input type="password" id="admin-pw-input" placeholder="Enter admin password" />
+      <div id="admin-pw-error"></div>
+      <button id="admin-pw-submit">Log In</button>
+    </div>
+    <button id="admin-fab" onclick="handleFab()">🔒 Admin</button>
+  </div>
+
+  <style>
+    #admin-fab-container {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+    #admin-fab {
+      background: var(--navy);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(28,47,114,0.35);
+      transition: background 0.2s, transform 0.1s;
+    }
+    #admin-fab:hover { background: #162460; }
+    #admin-fab:active { transform: scale(0.96); }
+    #admin-popup {
+      background: white;
+      border: 1.5px solid #ddd;
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(28,47,114,0.18);
+      padding: 18px 20px;
+      width: 240px;
+    }
+    #admin-popup-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+    #admin-pw-input {
+      width: 100%;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    #admin-pw-input:focus { border-color: var(--blue); }
+    #admin-pw-error {
+      font-size: 12px;
+      color: #dc2626;
+      margin-bottom: 8px;
+      min-height: 18px;
+    }
+    #admin-pw-submit {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #admin-pw-submit:hover { background: #0066cc; }
+  </style>
+
   <script>
     const dropZone  = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
@@ -220,13 +303,40 @@
       }
     });
 
-    // ── Formatting checker ──
-    const fmtInput   = document.getElementById('fmt-input');
-    const fmtLabel   = document.getElementById('fmt-label');
-    const fmtResult  = document.getElementById('fmt-result');
-    const btnCheck   = document.getElementById('btn-check');
-    const btnFix     = document.getElementById('btn-fix');
-    const fmtDrop    = document.getElementById('fmt-drop-zone');
+    // ── Admin button ──
+    function handleFab() {
+      const popup = document.getElementById('admin-popup');
+      popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+      if (popup.style.display === 'block') {
+        document.getElementById('admin-pw-input').focus();
+      }
+    }
+
+    document.getElementById('admin-pw-submit').addEventListener('click', async () => {
+      const pw = document.getElementById('admin-pw-input').value;
+      const err = document.getElementById('admin-pw-error');
+      err.textContent = '';
+      try {
+        const res = await fetch('/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'password=' + encodeURIComponent(pw)
+        });
+        if (res.redirected) {
+          window.location.href = res.url;
+        } else if (res.ok) {
+          window.location.href = '/admin/review';
+        } else {
+          err.textContent = 'Incorrect password';
+        }
+      } catch(e) {
+        err.textContent = 'Error: ' + e.message;
+      }
+    });
+
+    document.getElementById('admin-pw-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') document.getElementById('admin-pw-submit').click();
+    });
 
   </script>
 </body>
