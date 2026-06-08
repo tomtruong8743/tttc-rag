@@ -47,9 +47,11 @@ REJECTED   = ROOT_DIR / "data" / "rejected"
 APPROVED   = ROOT_DIR / "data" / "documents"
 META_FILE  = PENDING / "_meta.json"   # tracks submitter info per file
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
-MAX_FILE_SIZE_MB   = 20
-ADMIN_PASSWORD     = os.environ.get("ADMIN_PASSWORD", "vifc-admin-2026")
+ALLOWED_EXTENSIONS  = {".pdf", ".docx", ".txt", ".md"}
+FORMAT_EXTENSIONS   = {".docx", ".doc"}   # formatting check/fix only works on Word docs
+MAX_FILE_SIZE_MB    = 20
+ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD", "vifc-admin-2026")
+THE_THUC_DIR        = ROOT_DIR / "the_thuc"   # formatting checker scripts
 
 app = FastAPI(title="VIFC Knowledge Assistant")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "vifc-secret-key-change-me"))
@@ -294,6 +296,161 @@ async def admin_reject(request: Request, filename: str = Form(...)):
     save_meta(meta)
 
     return RedirectResponse(f"/admin/review?message=Rejected:+{original_name}", status_code=303)
+
+
+# ── Document Formatting ───────────────────────────────────────────
+
+import tempfile
+import subprocess as _sp
+from fastapi.responses import FileResponse
+
+def _run_format_check(docx_path: Path) -> dict:
+    """Run the thể thức checker and return results."""
+    out_dir = Path(tempfile.mkdtemp())
+    spec    = THE_THUC_DIR / "reference" / "nd30_spec.json"
+    script  = THE_THUC_DIR / "scripts" / "check_thethuc.py"
+    sys.path.insert(0, str(THE_THUC_DIR / "scripts"))
+    try:
+        result = _sp.run(
+            [sys.executable, str(script), str(docx_path),
+             "--out", str(out_dir), "--spec", str(spec)],
+            capture_output=True, text=True, timeout=60
+        )
+        json_file = out_dir / "ket_qua.json"
+        html_file = out_dir / "bao_cao.html"
+        if json_file.exists():
+            return {
+                "ok": True,
+                "results": json.loads(json_file.read_text(encoding="utf-8")),
+                "html": html_file.read_text(encoding="utf-8") if html_file.exists() else "",
+                "out_dir": str(out_dir),
+            }
+        return {"ok": False, "error": result.stderr or "Check script produced no output."}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def _run_format_fix(docx_path: Path) -> dict:
+    """Run the thể thức fixer and return path to fixed file."""
+    out_dir = Path(tempfile.mkdtemp())
+    spec    = THE_THUC_DIR / "reference" / "nd30_spec.json"
+    script  = THE_THUC_DIR / "scripts" / "fix_thethuc.py"
+    fixed   = out_dir / f"fixed_{docx_path.name}"
+    sys.path.insert(0, str(THE_THUC_DIR / "scripts"))
+    try:
+        result = _sp.run(
+            [sys.executable, str(script), str(docx_path),
+             "--out", str(fixed), "--spec", str(spec)],
+            capture_output=True, text=True, timeout=60
+        )
+        if fixed.exists():
+            return {"ok": True, "fixed_path": str(fixed), "filename": fixed.name}
+        return {"ok": False, "error": result.stderr or "Fix script produced no output."}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.post("/format/check")
+async def format_check(file: UploadFile = File(...)):
+    """Check Vietnamese government document formatting (NĐ30/2020)."""
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in FORMAT_EXTENSIONS:
+        return JSONResponse({"error": "Only .docx and .doc files can be checked."}, status_code=400)
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+        f.write(contents)
+        tmp_path = Path(f.name)
+    # Convert .doc to .docx if needed
+    if suffix == ".doc":
+        try:
+            from ingest import _convert_doc
+            tmp_path = _convert_doc(tmp_path)
+        except Exception:
+            pass
+    result = _run_format_check(tmp_path)
+    tmp_path.unlink(missing_ok=True)
+    return JSONResponse(result)
+
+
+@app.post("/format/fix")
+async def format_fix(file: UploadFile = File(...)):
+    """Fix Vietnamese government document formatting and return fixed .docx."""
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in FORMAT_EXTENSIONS:
+        return JSONResponse({"error": "Only .docx and .doc files can be fixed."}, status_code=400)
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+        f.write(contents)
+        tmp_path = Path(f.name)
+    result = _run_format_fix(tmp_path)
+    tmp_path.unlink(missing_ok=True)
+    if not result["ok"]:
+        return JSONResponse({"error": result["error"]}, status_code=500)
+    return FileResponse(
+        result["fixed_path"],
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=result["filename"],
+    )
+
+
+@app.post("/format/chat")
+async def format_chat_upload(
+    file: UploadFile = File(...),
+    action: str = Form("check"),   # "check" or "fix"
+):
+    """Handle file upload from the chat interface for formatting."""
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in FORMAT_EXTENSIONS:
+        return JSONResponse({
+            "message": f"Formatting check only works on .docx files. '{file.filename}' is not supported.",
+            "supported": False,
+        })
+    if action == "fix":
+        contents = await file.read()
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            f.write(contents)
+            tmp_path = Path(f.name)
+        result = _run_format_fix(tmp_path)
+        tmp_path.unlink(missing_ok=True)
+        if result["ok"]:
+            return JSONResponse({
+                "message": f"✅ Formatting fixed. Download the corrected file below.",
+                "download_url": f"/format/download?path={result['fixed_path']}&name={result['filename']}",
+                "supported": True,
+            })
+        return JSONResponse({"message": f"❌ Fix failed: {result['error']}", "supported": True})
+    else:
+        contents = await file.read()
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            f.write(contents)
+            tmp_path = Path(f.name)
+        result = _run_format_check(tmp_path)
+        tmp_path.unlink(missing_ok=True)
+        if result["ok"]:
+            results = result["results"]
+            errors   = [r for r in results if r.get("status") == "LỖI"]
+            passed   = [r for r in results if r.get("status") == "ĐẠT"]
+            summary  = f"📋 **Formatting Report for `{file.filename}`**\n\n"
+            summary += f"✅ Passed: {len(passed)} | ❌ Errors: {len(errors)}\n\n"
+            if errors:
+                summary += "**Issues found:**\n"
+                for e in errors[:10]:
+                    summary += f"- {e.get('muc','?')}: {e.get('mo_ta','')}\n"
+                if len(errors) > 10:
+                    summary += f"- *(and {len(errors)-10} more...)*\n"
+            else:
+                summary += "✅ Document formatting meets NĐ30/2020 standards."
+            return JSONResponse({"message": summary, "supported": True, "html": result.get("html","")})
+        return JSONResponse({"message": f"❌ Check failed: {result['error']}", "supported": True})
+
+
+@app.get("/format/download")
+async def format_download(path: str, name: str):
+    """Download a formatted file."""
+    p = Path(path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="File not found.")
+    return FileResponse(p, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", filename=name)
 
 
 if __name__ == "__main__":

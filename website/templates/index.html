@@ -112,6 +112,15 @@
       </div>
 
       <div class="chat-input-area">
+        <!-- File upload button -->
+        <label id="chat-file-btn" title="Upload a document to check/fix formatting" style="
+          cursor:pointer; background:var(--light-bg); border:1.5px solid var(--border);
+          border-radius:10px; width:44px; height:44px; display:flex; align-items:center;
+          justify-content:center; font-size:18px; flex-shrink:0; transition:all 0.2s;
+        " onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+          📎
+          <input type="file" id="chat-file-input" accept=".docx,.doc" style="display:none">
+        </label>
         <textarea
           id="user-input"
           rows="1"
@@ -347,6 +356,85 @@
 
     // Init on load
     setLang(currentLang);
+
+    // ── Chat file upload for formatting ──────────────────────────
+    const chatFileInput = document.getElementById('chat-file-input');
+
+    chatFileInput.addEventListener('change', async () => {
+      const file = chatFileInput.files[0];
+      if (!file) return;
+
+      // Show file attachment message
+      appendMessage('user', `📎 Uploaded: <strong>${file.name}</strong><br><small>Type "check formatting" or "fix formatting" to process this file.</small>`);
+
+      // Store file for later use
+      window._chatFile = file;
+      chatFileInput.value = '';
+
+      appendMessage('bot', `📄 File received: <strong>${file.name}</strong><br>You can now type:<br>• <em>"check formatting"</em> — to check against NĐ30/2020 standards<br>• <em>"fix formatting"</em> — to auto-fix and download a corrected file`);
+    });
+
+    // Override sendMessage to detect formatting commands
+    const _origSend = window.sendMessage;
+    window.sendMessage = async function(text) {
+      const t = (text || document.getElementById('user-input').value).trim().toLowerCase();
+
+      if (window._chatFile && (t.includes('check format') || t.includes('kiểm tra thể thức') || t.includes('kiem tra the thuc'))) {
+        const userText = text || document.getElementById('user-input').value;
+        document.getElementById('user-input').value = '';
+        appendMessage('user', escapeHtml(userText));
+        appendMessage('bot', `🔍 Checking formatting of <strong>${window._chatFile.name}</strong>...`);
+        const fd = new FormData();
+        fd.append('file', window._chatFile);
+        fd.append('action', 'check');
+        try {
+          const res  = await fetch('/format/chat', { method: 'POST', body: fd });
+          const data = await res.json();
+          appendMessage('bot', (data.message || data.error || 'Done.').replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'));
+        } catch(e) { appendMessage('bot', '❌ Format check failed.'); }
+        return;
+      }
+
+      if (window._chatFile && (t.includes('fix format') || t.includes('sửa thể thức') || t.includes('sua the thuc'))) {
+        const userText = text || document.getElementById('user-input').value;
+        document.getElementById('user-input').value = '';
+        appendMessage('user', escapeHtml(userText));
+        appendMessage('bot', `🔧 Fixing formatting of <strong>${window._chatFile.name}</strong>...`);
+        const fd = new FormData();
+        fd.append('file', window._chatFile);
+        fd.append('action', 'fix');
+        try {
+          const res  = await fetch('/format/chat', { method: 'POST', body: fd });
+          const data = await res.json();
+          let msg = (data.message || data.error || 'Done.').replace(/\n/g, '<br>');
+          if (data.download_url) {
+            msg += `<br><a href="${data.download_url}" download style="display:inline-block;margin-top:8px;background:var(--grad);color:white;padding:7px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">⬇️ Download Fixed File</a>`;
+          }
+          appendMessage('bot', msg);
+        } catch(e) { appendMessage('bot', '❌ Format fix failed.'); }
+        return;
+      }
+
+      // Default — pass to original send
+      if (_origSend) _origSend(text);
+      else {
+        const inp = document.getElementById('user-input');
+        const val = text || inp.value;
+        inp.value = '';
+        inp.style.height = 'auto';
+        document.getElementById('send-btn').disabled = true;
+        appendMessage('user', escapeHtml(val));
+        showTyping();
+        try {
+          const res = await fetch('/ask', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question: val}) });
+          const data = await res.json();
+          removeTyping();
+          if (data.error) appendMessage('bot', '⚠️ ' + escapeHtml(data.error));
+          else appendMessage('bot', data.answer, data.sources, data.wiki_created, data.wiki_name);
+        } catch(e) { removeTyping(); appendMessage('bot', '⚠️ Could not reach the server.'); }
+        finally { document.getElementById('send-btn').disabled = false; document.getElementById('user-input').focus(); }
+      }
+    };
 
     // ── Admin FAB ─────────────────────────────────────────────────
     let adminUnlocked = false;

@@ -1,0 +1,583 @@
+{
+  "_meta": {
+    "nguon": "Phụ lục I Nghị định số 30/2020/NĐ-CP ngày 05/3/2020 của Chính phủ",
+    "ghi_chu": "co_chu tính bằng point (pt). loai_chu: in_hoa | in_thuong. dang: dung | nghieng. dam: true/false. auto=true: kiểm tra tự động được; auto=false: chỉ liệt kê để rà thủ công (không bỏ sót mục nào). | Bổ sung: kiểm dấu gạch nối (dau_gach) và đường kẻ ngang dạng shape 0,75pt dưới Tiêu ngữ/tên cơ quan/trích yếu (duong_ke)."
+  },
+  "quy_dinh_chung": [
+    {
+      "key": "kho_giay",
+      "ten": "Khổ giấy A4 (210 × 297 mm)",
+      "can": "Phần I, Mục I.1",
+      "kiem_tra": "kho_giay",
+      "auto": true,
+      "ghi_chu": "pgSz ≈ 11906 × 16838 twips (sai số ±60)."
+    },
+    {
+      "key": "le_trang",
+      "ten": "Định lề trang (trên/dưới 20–25mm; trái 30–35mm; phải 15–20mm)",
+      "can": "Phần I, Mục I.3",
+      "kiem_tra": "le_trang",
+      "auto": true
+    },
+    {
+      "key": "phong_chu",
+      "ten": "Phông chữ Times New Roman, màu đen, mã Unicode TCVN 6909:2001",
+      "can": "Phần I, Mục I.4",
+      "kiem_tra": "phong_chu",
+      "auto": true
+    },
+    {
+      "key": "kieu_trinh_bay",
+      "ten": "Kiểu trình bày theo chiều dài khổ A4 (dọc)",
+      "can": "Phần I, Mục I.2",
+      "kiem_tra": "huong_giay",
+      "auto": true
+    },
+    {
+      "key": "dau_gach_noi",
+      "ten": "Dấu nối dùng gạch nối thường \"-\" (U+002D), KHÔNG dùng gạch dài \"–\" (en) hay \"—\" (em); đặc biệt ở Tiêu ngữ \"Độc lập - Tự do - Hạnh phúc\"",
+      "can": "Quy ước trình bày văn bản",
+      "kiem_tra": "dau_gach",
+      "auto": true,
+      "ghi_chu": "Quét toàn văn bản; mọi \"–\"/\"—\" đều bị báo lỗi và được thay bằng \"-\" khi tự sửa."
+    }
+  ],
+  "mau_chu": [
+    {
+      "key": "quoc_hieu",
+      "stt": "1",
+      "ten": "Quốc hiệu",
+      "o_so": "1",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 12,
+        "max": 13
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+      "auto": true,
+      "ghi_chu": "Ở phía trên cùng, bên phải trang đầu (canh giữa trong cột phải)."
+    },
+    {
+      "key": "tieu_ngu",
+      "stt": "1",
+      "ten": "Tiêu ngữ",
+      "o_so": "1",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "Độc lập - Tự do - Hạnh phúc",
+      "auto": true
+    },
+    {
+      "key": "dong_ke_tieu_ngu",
+      "stt": "1",
+      "ten": "Dòng kẻ ngang bên dưới Tiêu ngữ (dài bằng dòng chữ)",
+      "o_so": "1",
+      "auto": true,
+      "ghi_chu": "Đường kẻ liền, dạng shape, nét 0,75pt, canh giữa, bằng độ dài dòng Tiêu ngữ. Nét kiểm chính xác; độ dài đối chiếu ƯỚC LƯỢNG theo bề rộng chữ.",
+      "kiem_tra": "duong_ke",
+      "duoi": "tieu_ngu",
+      "dang_yeu_cau": "shape",
+      "weight_pt": 0.75,
+      "nghieng": false,
+      "ti_le_min": 0.85,
+      "ti_le_max": 1.2,
+      "canh": "giữa",
+      "do_dai": "bằng độ dài dòng Tiêu ngữ"
+    },
+    {
+      "key": "ten_cq_chu_quan",
+      "stt": "2",
+      "ten": "Tên cơ quan, tổ chức chủ quản trực tiếp",
+      "o_so": "2",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 12,
+        "max": 13
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "BỘ NỘI VỤ",
+      "auto": true
+    },
+    {
+      "key": "ten_cq_ban_hanh",
+      "stt": "2",
+      "ten": "Tên cơ quan, tổ chức ban hành văn bản",
+      "o_so": "2",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 12,
+        "max": 13
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "CỤC VĂN THƯ VÀ LƯU TRỮ NHÀ NƯỚC",
+      "auto": true
+    },
+    {
+      "key": "dong_ke_ten_cq",
+      "stt": "2",
+      "ten": "Dòng kẻ ngang dưới tên cơ quan ban hành (dài 1/3–1/2 dòng chữ)",
+      "o_so": "2",
+      "auto": true,
+      "ghi_chu": "Đường kẻ liền, dạng shape, nét 0,75pt, canh giữa, bằng 1/3–1/2 độ dài tên cơ quan ban hành. Nét kiểm chính xác; độ dài đối chiếu ƯỚC LƯỢNG theo bề rộng chữ.",
+      "kiem_tra": "duong_ke",
+      "duoi": "ten_cq_ban_hanh",
+      "dang_yeu_cau": "shape",
+      "weight_pt": 0.75,
+      "nghieng": false,
+      "ti_le_min": 0.28,
+      "ti_le_max": 0.55,
+      "canh": "giữa",
+      "do_dai": "bằng 1/3–1/2 độ dài tên cơ quan ban hành"
+    },
+    {
+      "key": "so_ky_hieu",
+      "stt": "3",
+      "ten": "Số, ký hiệu của văn bản",
+      "o_so": "3",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 13
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "Số: 15/QĐ-BNV; Số: 05/BNV-VP",
+      "auto": true,
+      "ghi_chu": "Từ \"Số\" in thường; ký hiệu (phần sau dấu /) in hoa; với số <10 phải thêm 0; giữa số–ký hiệu có /, giữa các nhóm chữ viết tắt có -."
+    },
+    {
+      "key": "dia_danh_thoi_gian",
+      "stt": "4",
+      "ten": "Địa danh và thời gian ban hành văn bản",
+      "o_so": "4",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "nghieng",
+      "dam": false,
+      "vi_du": "Thành phố Hồ Chí Minh, ngày 29 tháng 6 năm 2019",
+      "auto": true,
+      "ghi_chu": "Sau địa danh có dấu phẩy; ngày <10 và tháng 1,2 thêm 0; canh giữa dưới Quốc hiệu/Tiêu ngữ."
+    },
+    {
+      "key": "ten_loai",
+      "stt": "5a",
+      "ten": "Tên loại văn bản (văn bản có tên loại)",
+      "o_so": "5a",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "can_le": "center",
+      "vi_du": "CHỈ THỊ / TỜ TRÌNH / QUYẾT ĐỊNH",
+      "auto": true
+    },
+    {
+      "key": "trich_yeu",
+      "stt": "5a",
+      "ten": "Trích yếu nội dung (văn bản có tên loại)",
+      "o_so": "5a",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "can_le": "center",
+      "vi_du": "Về công tác phòng, chống lụt bão",
+      "auto": true
+    },
+    {
+      "key": "dong_ke_trich_yeu",
+      "stt": "5a",
+      "ten": "Dòng kẻ ngang dưới trích yếu (dài 1/3–1/2 dòng chữ)",
+      "o_so": "5a",
+      "auto": true,
+      "ghi_chu": "Đường kẻ liền, dạng shape, nét 0,75pt, canh giữa, bằng 1/3–1/2 độ dài dòng trích yếu (công văn). Nét kiểm chính xác; độ dài đối chiếu ƯỚC LƯỢNG theo bề rộng chữ.",
+      "kiem_tra": "duong_ke",
+      "duoi": "trich_yeu_cong_van",
+      "dang_yeu_cau": "shape",
+      "weight_pt": 0.75,
+      "nghieng": false,
+      "ti_le_min": 0.28,
+      "ti_le_max": 0.55,
+      "canh": "giữa",
+      "do_dai": "bằng 1/3–1/2 độ dài dòng trích yếu (công văn)"
+    },
+    {
+      "key": "trich_yeu_cong_van",
+      "stt": "5b",
+      "ten": "Trích yếu nội dung công văn (sau \"V/v\")",
+      "o_so": "5b",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 12,
+        "max": 13
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "V/v nâng bậc lương năm 2019",
+      "auto": true,
+      "ghi_chu": "Canh giữa dưới số và ký hiệu; cách 6pt."
+    },
+    {
+      "key": "noi_dung",
+      "stt": "6",
+      "ten": "Nội dung văn bản",
+      "o_so": "6",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": false,
+      "can_le": "both",
+      "vi_du": "Trong công tác chỉ đạo...",
+      "auto": true,
+      "ghi_chu": "Canh đều hai lề; đầu dòng lùi 1cm/1,27cm; cách đoạn ≥6pt; giãn dòng đơn → tối đa 1,5 lines."
+    },
+    {
+      "key": "phan_chuong_tu",
+      "stt": "6a",
+      "ten": "Từ \"Phần\", \"Chương\" và số thứ tự",
+      "o_so": "6",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "can_le": "center",
+      "vi_du": "Phần I / Chương I",
+      "auto": true
+    },
+    {
+      "key": "phan_chuong_tieu_de",
+      "stt": "6a",
+      "ten": "Tiêu đề của phần, chương",
+      "o_so": "6",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "can_le": "center",
+      "vi_du": "QUY ĐỊNH CHUNG",
+      "auto": true
+    },
+    {
+      "key": "muc_tu",
+      "stt": "6a",
+      "ten": "Từ \"Mục\", \"Tiểu mục\" và số thứ tự",
+      "o_so": "6",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "Mục 1 / Tiểu mục 1",
+      "auto": false,
+      "ghi_chu": "Phát hiện không ổn định → rà thủ công."
+    },
+    {
+      "key": "muc_tieu_de",
+      "stt": "6a",
+      "ten": "Tiêu đề của mục, tiểu mục",
+      "o_so": "6",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "QUẢN LÝ VĂN BẢN",
+      "auto": false,
+      "ghi_chu": "Rà thủ công."
+    },
+    {
+      "key": "dieu",
+      "stt": "6a",
+      "ten": "Điều (số thứ tự + tiêu đề)",
+      "o_so": "6",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "Điều 1. Bản sao văn bản",
+      "auto": true,
+      "ghi_chu": "Lùi đầu dòng 1cm/1,27cm; số Ả Rập + dấu chấm."
+    },
+    {
+      "key": "khoan",
+      "stt": "6a",
+      "ten": "Khoản (không tiêu đề)",
+      "o_so": "6",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "1. Các hình thức...",
+      "auto": false,
+      "ghi_chu": "Khoản có tiêu đề thì đậm; rà thủ công."
+    },
+    {
+      "key": "diem",
+      "stt": "6a",
+      "ten": "Điểm",
+      "o_so": "6",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "a) Đối với...",
+      "auto": false,
+      "ghi_chu": "Rà thủ công."
+    },
+    {
+      "key": "muc_so_bao_cao",
+      "stt": "6b",
+      "ten": "Số thứ tự và tiêu đề của mục (bố cục phần–mục–khoản–điểm)",
+      "o_so": "6",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "I. NHỮNG KẾT QUẢ...",
+      "auto": true
+    },
+    {
+      "key": "quyen_han_nguoi_ky",
+      "stt": "7",
+      "ten": "Quyền hạn của người ký (TM./KT./Q./TL./TUQ.)",
+      "o_so": "7a",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "TM. ỦY BAN NHÂN DÂN / KT. BỘ TRƯỞNG",
+      "auto": true
+    },
+    {
+      "key": "chuc_vu_nguoi_ky",
+      "stt": "7",
+      "ten": "Chức vụ của người ký",
+      "o_so": "7b",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "CHỦ TỊCH / THỨ TRƯỞNG",
+      "auto": true
+    },
+    {
+      "key": "ho_ten_nguoi_ky",
+      "stt": "7",
+      "ten": "Họ tên của người ký",
+      "o_so": "7b",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "Nguyễn Văn A",
+      "auto": true
+    },
+    {
+      "key": "kinh_gui",
+      "stt": "8a",
+      "ten": "Từ \"Kính gửi\" và tên cơ quan/cá nhân nhận (Tờ trình, Báo cáo, Công văn)",
+      "o_so": "9a",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "Kính gửi: Bộ Nội vụ",
+      "auto": true
+    },
+    {
+      "key": "noi_nhan_tu",
+      "stt": "8b",
+      "ten": "Từ \"Nơi nhận\"",
+      "o_so": "9b",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 12,
+        "max": 12
+      },
+      "dang": "nghieng",
+      "dam": true,
+      "vi_du": "Nơi nhận:",
+      "auto": true
+    },
+    {
+      "key": "noi_nhan_ds",
+      "stt": "8b",
+      "ten": "Danh sách nơi nhận (gồm dòng \"Lưu: VT,...\")",
+      "o_so": "9b",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 11,
+        "max": 11
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "- Như trên;  - Lưu: VT, NVĐP.",
+      "auto": true
+    },
+    {
+      "key": "phu_luc_tu",
+      "stt": "9",
+      "ten": "Từ \"Phụ lục\" và số thứ tự",
+      "o_so": "-",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 14,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "Phụ lục I",
+      "auto": true
+    },
+    {
+      "key": "phu_luc_tieu_de",
+      "stt": "9",
+      "ten": "Tiêu đề của phụ lục",
+      "o_so": "-",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "BẢNG CHỮ VIẾT TẮT",
+      "auto": true
+    },
+    {
+      "key": "dau_khan",
+      "stt": "10",
+      "ten": "Dấu chỉ mức độ khẩn (HỎA TỐC/THƯỢNG KHẨN/KHẨN)",
+      "o_so": "10b",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "HỎA TỐC / THƯỢNG KHẨN / KHẨN",
+      "auto": false,
+      "ghi_chu": "Trong khung chữ nhật viền đơn; mực đỏ tươi — rà thủ công."
+    },
+    {
+      "key": "ky_hieu_nguoi_soan",
+      "stt": "11",
+      "ten": "Ký hiệu người soạn thảo và số lượng bản phát hành",
+      "o_so": "12",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 11,
+        "max": 11
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "PL.(300)",
+      "auto": false,
+      "ghi_chu": "Ký hiệu in hoa, số lượng bản chữ số Ả Rập — rà thủ công."
+    },
+    {
+      "key": "dia_chi_cq",
+      "stt": "12",
+      "ten": "Địa chỉ cơ quan; email; website; điện thoại; Fax",
+      "o_so": "13",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 11,
+        "max": 12
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "ĐT: ... Fax: ... E-Mail: ... Website: ...",
+      "auto": false,
+      "ghi_chu": "Trang đầu, dưới đường kẻ nét liền — rà thủ công."
+    },
+    {
+      "key": "chi_dan_luu_hanh",
+      "stt": "13",
+      "ten": "Chỉ dẫn về phạm vi lưu hành",
+      "o_so": "11",
+      "loai_chu": "in_hoa",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": true,
+      "vi_du": "XEM XONG TRẢ LẠI / LƯU HÀNH NỘI BỘ",
+      "auto": false,
+      "ghi_chu": "Trong khung chữ nhật viền đơn — rà thủ công."
+    },
+    {
+      "key": "so_trang",
+      "stt": "14",
+      "ten": "Số trang",
+      "o_so": "-",
+      "loai_chu": "in_thuong",
+      "co_chu": {
+        "min": 13,
+        "max": 14
+      },
+      "dang": "dung",
+      "dam": false,
+      "vi_du": "2, 7, 13",
+      "auto": true,
+      "ghi_chu": "Đánh từ số 1, canh giữa lề trên, không hiển thị trang 1."
+    }
+  ]
+}
