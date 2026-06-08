@@ -14,7 +14,8 @@ import chromadb
 from chromadb.utils import embedding_functions
 
 DATA_DIR = Path("data/documents")
-CHROMA_DIR = Path("chroma_db")
+# Store ChromaDB in persistent volume (/app/data on Railway, ./data locally)
+CHROMA_DIR = Path("data/chroma_db")
 COLLECTION_NAME = "documents"
 CHUNK_SIZE = 1500      # characters — larger chunks preserve more context per decree article
 CHUNK_OVERLAP = 200    # characters

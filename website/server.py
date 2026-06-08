@@ -192,8 +192,11 @@ async def ingest_direct(file: UploadFile = File(...)):
             tmp_path.unlink(missing_ok=True)
             return JSONResponse({"error": "No text extracted from file."}, status_code=400)
 
-        # Initialize ChromaDB
-        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        # Initialize ChromaDB - ensure directory exists
+        chroma_path = Path(CHROMA_DIR)
+        chroma_path.mkdir(parents=True, exist_ok=True)
+
+        client = chromadb.PersistentClient(path=str(chroma_path))
         collection = client.get_or_create_collection(
             name=COLLECTION_NAME,
             embedding_function=embedding_functions.SentenceTransformerEmbeddingFunction(
