@@ -306,42 +306,53 @@ from fastapi.responses import FileResponse
 
 
 def _insert_missing_line(doc, para_index: int, length_pt: float, weight_pt: float = 0.75):
-    """Insert a VML horizontal line shape into the paragraph AFTER para_index."""
-    from lxml import etree
-    from docx_format import q, V
+    """Insert a VML horizontal line shape in a new paragraph AFTER para_index.
 
-    # Build a new paragraph with a VML line shape
-    length_str = f"{length_pt:.0f}pt"
+    Uses etree.SubElement (not fromstring) to avoid namespace prefix corruption
+    when inserting into an existing document tree.
+    """
+    from lxml import etree
+
+    W   = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    VML = "urn:schemas-microsoft-com:vml"
+
+    length_str = f"{length_pt:.1f}pt"
     weight_str = f"{weight_pt}pt"
 
-    vml_ns  = "urn:schemas-microsoft-com:vml"
-    w_ns    = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-    o_ns    = "urn:schemas-microsoft-com:office:office"
+    # New paragraph
+    p_el = etree.Element(f"{{{W}}}p")
 
-    # Create the paragraph element
-    new_p = etree.fromstring(f"""
-<w:p xmlns:w="{w_ns}" xmlns:v="{vml_ns}" xmlns:o="{o_ns}">
-  <w:pPr>
-    <w:jc w:val="center"/>
-    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
-  </w:pPr>
-  <w:r>
-    <w:pict>
-      <v:line
-        xmlns:v="{vml_ns}"
-        style="position:absolute;left:0;text-align:left;z-index:251659264;mso-wrap-edited:f;mso-width-percent:0;mso-height-percent:0;mso-width-percent:0;mso-height-percent:0"
-        from="0,0" to="{length_str},0"
-        strokeweight="{weight_str}">
-        <v:stroke joinstyle="miter"/>
-      </v:line>
-    </w:pict>
-  </w:r>
-</w:p>""")
+    # Paragraph properties — centred, no spacing
+    pPr     = etree.SubElement(p_el, f"{{{W}}}pPr")
+    jc      = etree.SubElement(pPr,  f"{{{W}}}jc")
+    jc.set(f"{{{W}}}val", "center")
+    spacing = etree.SubElement(pPr,  f"{{{W}}}spacing")
+    spacing.set(f"{{{W}}}before", "0")
+    spacing.set(f"{{{W}}}after",  "0")
+    spacing.set(f"{{{W}}}line",   "240")
+    spacing.set(f"{{{W}}}lineRule", "auto")
 
-    # Insert after the anchor paragraph
+    # Run containing the picture
+    r_el  = etree.SubElement(p_el,  f"{{{W}}}r")
+    pict  = etree.SubElement(r_el,  f"{{{W}}}pict")
+
+    # VML line shape
+    vline = etree.SubElement(pict, f"{{{VML}}}line")
+    vline.set("style",
+              "position:absolute;left:0;text-align:left;"
+              "z-index:251659264;mso-wrap-edited:f;"
+              "mso-width-percent:0;mso-height-percent:0")
+    vline.set("from",         "0,0")
+    vline.set("to",           f"{length_str},0")
+    vline.set("strokeweight", weight_str)
+
+    stroke = etree.SubElement(vline, f"{{{VML}}}stroke")
+    stroke.set("joinstyle", "miter")
+
+    # Insert the new paragraph immediately after the anchor
     anchor_el = doc.p_elements[para_index]
-    anchor_el.addnext(new_p)
-    return new_p
+    anchor_el.addnext(p_el)
+    return p_el
 
 def _run_format_check(docx_path: Path) -> dict:
     """Run the thể thức checker by importing directly (avoids subprocess PATH issues)."""
@@ -475,7 +486,7 @@ def _run_format_fix(docx_path: Path) -> dict:
             anchor = det.found.get(anchor_key)
             if anchor is None or anchor.index is None:
                 continue
-            shapes, _ = doc.lines_near(anchor.index, lookahead=2)
+            shapes, _ = doc.lines_near(anchor.index, lookahead=3)
             if shapes:
                 continue  # line already exists — fix_lines handled it
             # Line is missing — calculate appropriate length and insert
@@ -484,7 +495,10 @@ def _run_format_fix(docx_path: Path) -> dict:
             text_width = estimate_text_width_pt(anchor.text, size)
             if not text_width:
                 text_width = 150.0
-            ratio = (item.get("ti_le_min", 0.9) + item.get("ti_le_max", 1.0)) / 2
+            # Use midpoint of allowed ratio range; clamp so line isn't too long
+            ti_min = item.get("ti_le_min", 0.85)
+            ti_max = item.get("ti_le_max", 1.0)
+            ratio  = (ti_min + ti_max) / 2
             length_pt = round(text_width * ratio, 1)
             _insert_missing_line(doc, anchor.index, length_pt, weight_pt=0.75)
             n_inserted += 1
