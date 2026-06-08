@@ -119,38 +119,6 @@
     }
     .info-box strong { color: var(--navy); }
 
-    /* Formatting section */
-    .section-divider {
-      border: none; border-top: 2px solid var(--border);
-      margin: 36px 0 28px;
-    }
-    .format-result {
-      margin-top: 16px;
-      padding: 14px 18px;
-      border-radius: 10px;
-      font-size: 13px;
-      line-height: 1.8;
-      display: none;
-    }
-    .format-result.error   { background:#fef2f2; border:1.5px solid #fca5a5; color:#b91c1c; }
-    .format-result.success { background:#e8f8ef; border:1.5px solid #7dd6a8; color:#1a6640; }
-    .format-result.info    { background:#f0f7ff; border:1.5px solid var(--border); color:var(--text); }
-    .format-actions { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-    .format-btn {
-      border: none; border-radius: 8px; padding: 9px 20px;
-      font-size: 13px; font-weight: 600; cursor: pointer;
-      font-family: inherit; transition: opacity 0.2s;
-    }
-    .format-btn.check { background: var(--navy); color: white; }
-    .format-btn.fix   { background: var(--grad); color: white; }
-    .format-btn:hover { opacity: 0.85; }
-    .format-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .download-link {
-      display: inline-block; margin-top: 10px;
-      background: var(--grad); color: white;
-      padding: 8px 18px; border-radius: 8px;
-      text-decoration: none; font-size: 13px; font-weight: 600;
-    }
   </style>
 </head>
 <body>
@@ -224,37 +192,6 @@
         <button type="submit" class="submit-btn">Submit for Review</button>
       </form>
 
-      <!-- ── Formatting Checker ── -->
-      <hr class="section-divider">
-
-      <h2>Check or Fix Document Formatting</h2>
-      <p class="subtitle">For Vietnamese government documents (.docx only).<br>
-      Checks formatting against <strong>Nghị định 30/2020/NĐ-CP</strong> standards (font, size, margins, layout).</p>
-
-      <div class="info-box">
-        <strong>What this does:</strong><br>
-        • <strong>Check</strong> — scans your .docx and reports which formatting rules pass or fail<br>
-        • <strong>Fix</strong> — automatically corrects formatting errors and returns a fixed .docx file
-      </div>
-
-      <div class="form-group">
-        <label>Select a .docx file to check or fix</label>
-        <div class="drop-zone" id="fmt-drop-zone" onclick="document.getElementById('fmt-input').click()">
-          <div class="icon">🔍</div>
-          <p><strong>Click to browse</strong> or drag and drop a .docx file</p>
-          <p>Vietnamese government documents only — DOCX format</p>
-          <div class="file-selected" id="fmt-label"></div>
-          <input type="file" id="fmt-input" accept=".docx,.doc">
-        </div>
-      </div>
-
-      <div class="format-actions">
-        <button class="format-btn check" id="btn-check-fix" disabled onclick="runFormat()">🔍 Check &amp; Fix Formatting</button>
-      </div>
-
-      <div class="format-result" id="fmt-result"></div>
-      <div id="fmt-html-report" style="display:none;margin-top:20px;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;"></div>
-
     </div>
   </main>
 
@@ -291,86 +228,6 @@
     const btnFix     = document.getElementById('btn-fix');
     const fmtDrop    = document.getElementById('fmt-drop-zone');
 
-    const fmtReport  = document.getElementById('fmt-html-report');
-    const btnCheckFix = document.getElementById('btn-check-fix');
-
-    function onFmtFile(file) {
-      fmtLabel.textContent = '📎 ' + file.name;
-      btnCheckFix.disabled = false;
-      fmtResult.style.display = 'none';
-      fmtReport.style.display = 'none';
-    }
-
-    fmtInput.addEventListener('change', () => { if (fmtInput.files[0]) onFmtFile(fmtInput.files[0]); });
-
-    fmtDrop.addEventListener('dragover', e => { e.preventDefault(); fmtDrop.classList.add('drag-over'); });
-    fmtDrop.addEventListener('dragleave', () => fmtDrop.classList.remove('drag-over'));
-    fmtDrop.addEventListener('drop', e => {
-      e.preventDefault();
-      fmtDrop.classList.remove('drag-over');
-      if (e.dataTransfer.files[0]) {
-        fmtInput.files = e.dataTransfer.files;
-        onFmtFile(e.dataTransfer.files[0]);
-      }
-    });
-
-    async function runFormat() {
-      if (!fmtInput.files[0]) return;
-      btnCheckFix.disabled = true;
-      fmtResult.style.display = 'block';
-      fmtResult.className = 'format-result info';
-      fmtResult.innerHTML = '🔍 Checking formatting and applying fixes...';
-      fmtReport.style.display = 'none';
-
-      const fd = new FormData();
-      fd.append('file', fmtInput.files[0]);
-
-      try {
-        const res  = await fetch('/format/full', { method: 'POST', body: fd });
-        const data = await res.json();
-
-        if (!data.supported) {
-          fmtResult.className = 'format-result error';
-          fmtResult.innerHTML = '❌ ' + (data.message || 'Unsupported file type.');
-        } else {
-          // Summary bar
-          const s = data.summary || {};
-          const dat = s.dat || 0, loi = s.loi || 0, warn = (s.khong_tim_thay||0)+(s.canh_bao||0), thu = s.thu_cong||0;
-          let summary = `<strong>📋 Formatting Report — ${data.filename}</strong><br>`;
-          summary += `✅ Passed: <b>${dat}</b> &nbsp;|&nbsp; ❌ Errors: <b style="color:#b91c1c">${loi}</b> &nbsp;|&nbsp; ⚠️ Warnings: <b style="color:#92400e">${warn}</b> &nbsp;|&nbsp; 🔵 Manual check: <b>${thu}</b>`;
-
-          if (data.download_url) {
-            let fixDetail = '';
-            if (data.fixed_count > 0) fixDetail += ` ${data.fixed_count} element(s) corrected`;
-            if (data.n_inserted > 0)  fixDetail += `, ${data.n_inserted} missing line(s) inserted`;
-            if (data.n_line > 0)      fixDetail += `, ${data.n_line} line weight(s) fixed`;
-            if (data.n_dash > 0)      fixDetail += `, ${data.n_dash} dash(es) normalised`;
-            summary += `<br><br>🔧 <strong>Auto-fixed:${fixDetail || ' no auto-fixable errors found'}</strong><br><a class="download-link" href="${data.download_url}" download>⬇️ Download Fixed File</a>`;
-            fmtResult.className = 'format-result success';
-          } else if (data.fix_error) {
-            summary += `<br><br>⚠️ Auto-fix failed: ${data.fix_error.split('\n')[0]}`;
-            fmtResult.className = 'format-result info';
-          }
-
-          fmtResult.innerHTML = summary;
-
-          // Show full HTML report in iframe-like div
-          if (data.html) {
-            fmtReport.style.display = 'block';
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'width:100%;height:700px;border:none;';
-            iframe.srcdoc = data.html;
-            fmtReport.innerHTML = '';
-            fmtReport.appendChild(iframe);
-          }
-        }
-      } catch (err) {
-        fmtResult.className = 'format-result error';
-        fmtResult.innerHTML = '❌ Request failed. Is the server running?';
-      }
-
-      btnCheckFix.disabled = false;
-    }
   </script>
 </body>
 </html>
