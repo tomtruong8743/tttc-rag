@@ -48,7 +48,7 @@ APPROVED   = ROOT_DIR / "data" / "documents"
 META_FILE  = PENDING / "_meta.json"   # tracks submitter info per file
 
 ALLOWED_EXTENSIONS  = {".pdf", ".docx", ".txt", ".md"}
-MAX_FILE_SIZE_MB    = 20
+MAX_FILE_SIZE_MB    = 500  # Increased from 20MB to allow large documents
 ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD", "vifc-admin-2026")
 
 app = FastAPI(title="VIFC Knowledge Assistant - v2")
