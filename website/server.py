@@ -393,55 +393,57 @@ async def format_fix(file: UploadFile = File(...)):
     )
 
 
-@app.post("/format/chat")
-async def format_chat_upload(
-    file: UploadFile = File(...),
-    action: str = Form("check"),   # "check" or "fix"
-):
-    """Handle file upload from the chat interface for formatting."""
+@app.post("/format/full")
+async def format_full(file: UploadFile = File(...)):
+    """Always runs BOTH check and fix. Returns HTML report + download link."""
     suffix = Path(file.filename).suffix.lower()
     if suffix not in FORMAT_EXTENSIONS:
         return JSONResponse({
-            "message": f"Formatting check only works on .docx files. '{file.filename}' is not supported.",
             "supported": False,
+            "message": f"Formatting only works on .docx files. '{file.filename}' is not supported.",
         })
-    if action == "fix":
-        contents = await file.read()
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
-            f.write(contents)
-            tmp_path = Path(f.name)
-        result = _run_format_fix(tmp_path)
-        tmp_path.unlink(missing_ok=True)
-        if result["ok"]:
-            return JSONResponse({
-                "message": f"✅ Formatting fixed. Download the corrected file below.",
-                "download_url": f"/format/download?path={result['fixed_path']}&name={result['filename']}",
-                "supported": True,
-            })
-        return JSONResponse({"message": f"❌ Fix failed: {result['error']}", "supported": True})
+
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+        f.write(contents)
+        tmp_path = Path(f.name)
+
+    # Step 1 — Check
+    check = _run_format_check(tmp_path)
+
+    # Step 2 — Fix (always, regardless of check result)
+    fix = _run_format_fix(tmp_path)
+
+    tmp_path.unlink(missing_ok=True)
+
+    response = {"supported": True, "filename": file.filename}
+
+    if check["ok"]:
+        response["html"]    = check.get("html", "")
+        response["results"] = check.get("results", {})
+        tom_tat = check["results"].get("tom_tat", {}) if isinstance(check.get("results"), dict) else {}
+        response["summary"] = tom_tat
     else:
-        contents = await file.read()
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
-            f.write(contents)
-            tmp_path = Path(f.name)
-        result = _run_format_check(tmp_path)
-        tmp_path.unlink(missing_ok=True)
-        if result["ok"]:
-            results = result["results"]
-            errors   = [r for r in results if r.get("status") == "LỖI"]
-            passed   = [r for r in results if r.get("status") == "ĐẠT"]
-            summary  = f"📋 **Formatting Report for `{file.filename}`**\n\n"
-            summary += f"✅ Passed: {len(passed)} | ❌ Errors: {len(errors)}\n\n"
-            if errors:
-                summary += "**Issues found:**\n"
-                for e in errors[:10]:
-                    summary += f"- {e.get('muc','?')}: {e.get('mo_ta','')}\n"
-                if len(errors) > 10:
-                    summary += f"- *(and {len(errors)-10} more...)*\n"
-            else:
-                summary += "✅ Document formatting meets NĐ30/2020 standards."
-            return JSONResponse({"message": summary, "supported": True, "html": result.get("html","")})
-        return JSONResponse({"message": f"❌ Check failed: {result['error']}", "supported": True})
+        response["check_error"] = check.get("error", "Check failed")
+
+    if fix["ok"]:
+        response["download_url"]  = f"/format/download?path={fix['fixed_path']}&name={fix['filename']}"
+        response["fixed_filename"] = fix["filename"]
+    else:
+        response["fix_error"] = fix.get("error", "Fix failed")
+
+    return JSONResponse(response)
+
+
+@app.post("/format/chat")
+async def format_chat_upload(file: UploadFile = File(...), action: str = Form("check")):
+    """Legacy endpoint — now delegates to /format/full."""
+    # Re-read and forward
+    contents = await file.read()
+    from fastapi import UploadFile as _UF
+    import io
+    fake = UploadFile(filename=file.filename, file=io.BytesIO(contents))
+    return await format_full(fake)
 
 
 @app.get("/format/download")

@@ -249,11 +249,11 @@
       </div>
 
       <div class="format-actions">
-        <button class="format-btn check" id="btn-check" disabled onclick="runFormat('check')">🔍 Check Formatting</button>
-        <button class="format-btn fix"   id="btn-fix"   disabled onclick="runFormat('fix')">🔧 Fix Formatting</button>
+        <button class="format-btn check" id="btn-check-fix" disabled onclick="runFormat()">🔍 Check &amp; Fix Formatting</button>
       </div>
 
       <div class="format-result" id="fmt-result"></div>
+      <div id="fmt-html-report" style="display:none;margin-top:20px;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;"></div>
 
     </div>
   </main>
@@ -291,14 +291,17 @@
     const btnFix     = document.getElementById('btn-fix');
     const fmtDrop    = document.getElementById('fmt-drop-zone');
 
-    fmtInput.addEventListener('change', () => {
-      if (fmtInput.files[0]) {
-        fmtLabel.textContent = '📎 ' + fmtInput.files[0].name;
-        btnCheck.disabled = false;
-        btnFix.disabled   = false;
-        fmtResult.style.display = 'none';
-      }
-    });
+    const fmtReport  = document.getElementById('fmt-html-report');
+    const btnCheckFix = document.getElementById('btn-check-fix');
+
+    function onFmtFile(file) {
+      fmtLabel.textContent = '📎 ' + file.name;
+      btnCheckFix.disabled = false;
+      fmtResult.style.display = 'none';
+      fmtReport.style.display = 'none';
+    }
+
+    fmtInput.addEventListener('change', () => { if (fmtInput.files[0]) onFmtFile(fmtInput.files[0]); });
 
     fmtDrop.addEventListener('dragover', e => { e.preventDefault(); fmtDrop.classList.add('drag-over'); });
     fmtDrop.addEventListener('dragleave', () => fmtDrop.classList.remove('drag-over'));
@@ -307,48 +310,61 @@
       fmtDrop.classList.remove('drag-over');
       if (e.dataTransfer.files[0]) {
         fmtInput.files = e.dataTransfer.files;
-        fmtLabel.textContent = '📎 ' + e.dataTransfer.files[0].name;
-        btnCheck.disabled = false;
-        btnFix.disabled   = false;
+        onFmtFile(e.dataTransfer.files[0]);
       }
     });
 
-    async function runFormat(action) {
+    async function runFormat() {
       if (!fmtInput.files[0]) return;
-      btnCheck.disabled = true;
-      btnFix.disabled   = true;
+      btnCheckFix.disabled = true;
       fmtResult.style.display = 'block';
       fmtResult.className = 'format-result info';
-      fmtResult.innerHTML = action === 'check'
-        ? '🔍 Checking formatting...'
-        : '🔧 Fixing formatting, please wait...';
+      fmtResult.innerHTML = '🔍 Checking formatting and applying fixes...';
+      fmtReport.style.display = 'none';
 
       const fd = new FormData();
       fd.append('file', fmtInput.files[0]);
-      fd.append('action', action);
 
       try {
-        const res  = await fetch('/format/chat', { method: 'POST', body: fd });
+        const res  = await fetch('/format/full', { method: 'POST', body: fd });
         const data = await res.json();
 
-        if (data.error) {
+        if (!data.supported) {
           fmtResult.className = 'format-result error';
-          fmtResult.innerHTML = '❌ ' + data.error;
-        } else if (data.download_url) {
-          fmtResult.className = 'format-result success';
-          fmtResult.innerHTML = data.message +
-            `<br><a class="download-link" href="${data.download_url}" download>⬇️ Download Fixed File</a>`;
+          fmtResult.innerHTML = '❌ ' + (data.message || 'Unsupported file type.');
         } else {
-          fmtResult.className = 'format-result info';
-          fmtResult.innerHTML = data.message.replace(/\n/g, '<br>');
+          // Summary bar
+          const s = data.summary || {};
+          const dat = s.dat || 0, loi = s.loi || 0, warn = (s.khong_tim_thay||0)+(s.canh_bao||0), thu = s.thu_cong||0;
+          let summary = `<strong>📋 Formatting Report — ${data.filename}</strong><br>`;
+          summary += `✅ Passed: <b>${dat}</b> &nbsp;|&nbsp; ❌ Errors: <b style="color:#b91c1c">${loi}</b> &nbsp;|&nbsp; ⚠️ Warnings: <b style="color:#92400e">${warn}</b> &nbsp;|&nbsp; 🔵 Manual check: <b>${thu}</b>`;
+
+          if (data.download_url) {
+            summary += `<br><br>🔧 Formatting fixed automatically. <a class="download-link" href="${data.download_url}" download>⬇️ Download Fixed File</a>`;
+            fmtResult.className = 'format-result success';
+          } else if (data.fix_error) {
+            summary += `<br><br>⚠️ Auto-fix failed: ${data.fix_error}`;
+            fmtResult.className = 'format-result info';
+          }
+
+          fmtResult.innerHTML = summary;
+
+          // Show full HTML report in iframe-like div
+          if (data.html) {
+            fmtReport.style.display = 'block';
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = 'width:100%;height:700px;border:none;';
+            iframe.srcdoc = data.html;
+            fmtReport.innerHTML = '';
+            fmtReport.appendChild(iframe);
+          }
         }
       } catch (err) {
         fmtResult.className = 'format-result error';
         fmtResult.innerHTML = '❌ Request failed. Is the server running?';
       }
 
-      btnCheck.disabled = false;
-      btnFix.disabled   = false;
+      btnCheckFix.disabled = false;
     }
   </script>
 </body>
