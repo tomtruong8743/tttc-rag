@@ -340,10 +340,14 @@
           summary += `✅ Passed: <b>${dat}</b> &nbsp;|&nbsp; ❌ Errors: <b style="color:#b91c1c">${loi}</b> &nbsp;|&nbsp; ⚠️ Warnings: <b style="color:#92400e">${warn}</b> &nbsp;|&nbsp; 🔵 Manual check: <b>${thu}</b>`;
 
           if (data.download_url) {
-            summary += `<br><br>🔧 Formatting fixed automatically. <a class="download-link" href="${data.download_url}" download>⬇️ Download Fixed File</a>`;
+            let fixDetail = '';
+            if (data.fixed_count > 0) fixDetail += ` ${data.fixed_count} element(s) corrected`;
+            if (data.n_dash > 0)      fixDetail += `, ${data.n_dash} dash(es) normalised`;
+            if (data.n_line > 0)      fixDetail += `, ${data.n_line} line weight(s) fixed`;
+            summary += `<br><br>🔧 <strong>Auto-fixed:${fixDetail || ' no auto-fixable errors found'}</strong><br><a class="download-link" href="${data.download_url}" download>⬇️ Download Fixed File</a>`;
             fmtResult.className = 'format-result success';
           } else if (data.fix_error) {
-            summary += `<br><br>⚠️ Auto-fix failed: ${data.fix_error}`;
+            summary += `<br><br>⚠️ Auto-fix failed: ${data.fix_error.split('\n')[0]}`;
             fmtResult.className = 'format-result info';
           }
 

@@ -305,49 +305,154 @@ import subprocess as _sp
 from fastapi.responses import FileResponse
 
 def _run_format_check(docx_path: Path) -> dict:
-    """Run the thể thức checker and return results."""
-    out_dir = Path(tempfile.mkdtemp())
-    spec    = THE_THUC_DIR / "reference" / "nd30_spec.json"
-    script  = THE_THUC_DIR / "scripts" / "check_thethuc.py"
-    sys.path.insert(0, str(THE_THUC_DIR / "scripts"))
+    """Run the thể thức checker by importing directly (avoids subprocess PATH issues)."""
+    out_dir   = Path(tempfile.mkdtemp())
+    spec_file = THE_THUC_DIR / "reference" / "nd30_spec.json"
+    scripts   = str(THE_THUC_DIR / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
     try:
-        result = _sp.run(
-            [sys.executable, str(script), str(docx_path),
-             "--out", str(out_dir), "--spec", str(spec)],
-            capture_output=True, text=True, timeout=60
-        )
+        import importlib, json as _json
+        # Force reload so changes to scripts are picked up
+        for mod in ["docx_format", "check_thethuc"]:
+            if mod in sys.modules:
+                importlib.reload(sys.modules[mod])
+
+        import check_thethuc as CC
+        from docx_format import DocxFormat
+
+        with open(spec_file, encoding="utf-8") as f:
+            spec = _json.load(f)
+
+        doc = DocxFormat(str(docx_path))
+        results, det = CC.run_checks(doc, spec)
+
+        doc_name  = docx_path.name
+        html_body = CC.build_html(results, doc_name)
+
         json_file = out_dir / "ket_qua.json"
         html_file = out_dir / "bao_cao.html"
-        if json_file.exists():
-            return {
-                "ok": True,
-                "results": json.loads(json_file.read_text(encoding="utf-8")),
-                "html": html_file.read_text(encoding="utf-8") if html_file.exists() else "",
-                "out_dir": str(out_dir),
-            }
-        return {"ok": False, "error": result.stderr or "Check script produced no output."}
+        json_file.write_text(_json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+        html_file.write_text(html_body, encoding="utf-8")
+
+        return {
+            "ok":      True,
+            "results": results,
+            "html":    html_body,
+            "out_dir": str(out_dir),
+        }
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        import traceback
+        return {"ok": False, "error": traceback.format_exc()}
 
 
 def _run_format_fix(docx_path: Path) -> dict:
-    """Run the thể thức fixer and return path to fixed file."""
-    out_dir = Path(tempfile.mkdtemp())
-    spec    = THE_THUC_DIR / "reference" / "nd30_spec.json"
-    script  = THE_THUC_DIR / "scripts" / "fix_thethuc.py"
-    fixed   = out_dir / f"fixed_{docx_path.name}"
-    sys.path.insert(0, str(THE_THUC_DIR / "scripts"))
+    """Run the thể thức fixer by importing directly."""
+    out_dir   = Path(tempfile.mkdtemp())
+    spec_file = THE_THUC_DIR / "reference" / "nd30_spec.json"
+    scripts   = str(THE_THUC_DIR / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+
+    fixed_path = out_dir / f"fixed_{docx_path.name}"
+
     try:
-        result = _sp.run(
-            [sys.executable, str(script), str(docx_path),
-             "--out", str(fixed), "--spec", str(spec)],
-            capture_output=True, text=True, timeout=60
-        )
-        if fixed.exists():
-            return {"ok": True, "fixed_path": str(fixed), "filename": fixed.name}
-        return {"ok": False, "error": result.stderr or "Fix script produced no output."}
+        import importlib, json as _json
+        for mod in ["docx_format", "check_thethuc", "fix_thethuc"]:
+            if mod in sys.modules:
+                importlib.reload(sys.modules[mod])
+
+        import fix_thethuc as FX
+        import check_thethuc as CC
+        from docx_format import DocxFormat
+
+        with open(spec_file, encoding="utf-8") as f:
+            spec = _json.load(f)
+
+        spec_by_key = {it["key"]: it for it in spec["mau_chu"]}
+        doc = DocxFormat(str(docx_path))
+        results, det = CC.run_checks(doc, spec)
+
+        # Apply all auto-fixable errors
+        from lxml import etree
+        targets = {}
+
+        def add_target(para, item):
+            if para is None or para.index is None:
+                return
+            el = doc.p_elements[para.index]
+            targets[id(el)] = (el, item)
+
+        fixed_keys = []
+        for res in results["mau_chu"]:
+            if res["status"] != "loi" or not res.get("auto"):
+                continue
+            key  = res["key"]
+            item = spec_by_key.get(key)
+            if not item:
+                continue
+            para = det.found.get(key)
+            if key == "noi_nhan_ds":
+                for p in getattr(det, "noi_nhan_block", []):
+                    add_target(p, item)
+            else:
+                add_target(para, item)
+            fixed_keys.append(key)
+
+        for el, item in targets.values():
+            lo = hi = None
+            if item.get("co_chu"):
+                lo, hi = item["co_chu"]["min"], item["co_chu"]["max"]
+            bold   = item.get("dam")
+            dang   = item.get("dang")
+            italic = True if dang == "nghieng" else (False if dang == "dung" else None)
+            caps   = (item.get("loai_chu") == "in_hoa")
+            from docx_format import q as _q
+            for r_el in el.iter(_q("r")):
+                has_text = any(t.tag in (_q("t"), _q("delText")) for t in r_el.iter())
+                if not has_text:
+                    continue
+                cur  = None
+                rpr  = r_el.find(_q("rPr"))
+                if rpr is not None:
+                    sz = rpr.find(_q("sz"))
+                    if sz is not None and sz.get(_q("val")):
+                        cur = int(sz.get(_q("val"))) / 2.0
+                size_pt = FX.clamp_size(cur, lo, hi) if lo is not None else None
+                FX.set_run_format(r_el, font="Times New Roman", size_pt=size_pt,
+                                  bold=bold, italic=italic,
+                                  caps=caps if caps else None, color="000000")
+
+        # Fix dashes and line weights
+        n_dash = FX.fix_dashes(doc)
+        n_line = FX.fix_lines(doc, det, spec)
+
+        # Save fixed docx
+        import zipfile as _zf, shutil as _sh
+        new_xml = etree.tostring(doc._doc, xml_declaration=True,
+                                 encoding="UTF-8", standalone=True)
+        tmp = str(fixed_path) + ".tmp"
+        with _zf.ZipFile(str(docx_path)) as zin, \
+             _zf.ZipFile(tmp, "w", _zf.ZIP_DEFLATED) as zout:
+            for zitem in zin.infolist():
+                data = zin.read(zitem.filename)
+                if zitem.filename == "word/document.xml":
+                    data = new_xml
+                zout.writestr(zitem, data)
+        _sh.move(tmp, str(fixed_path))
+
+        return {
+            "ok":          True,
+            "fixed_path":  str(fixed_path),
+            "filename":    fixed_path.name,
+            "fixed_count": len(targets),
+            "fixed_keys":  sorted(set(fixed_keys)),
+            "n_dash":      n_dash,
+            "n_line":      n_line,
+        }
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        import traceback
+        return {"ok": False, "error": traceback.format_exc()}
 
 
 @app.post("/format/check")
@@ -427,8 +532,12 @@ async def format_full(file: UploadFile = File(...)):
         response["check_error"] = check.get("error", "Check failed")
 
     if fix["ok"]:
-        response["download_url"]  = f"/format/download?path={fix['fixed_path']}&name={fix['filename']}"
+        response["download_url"]   = f"/format/download?path={fix['fixed_path']}&name={fix['filename']}"
         response["fixed_filename"] = fix["filename"]
+        response["fixed_count"]    = fix.get("fixed_count", 0)
+        response["fixed_keys"]     = fix.get("fixed_keys", [])
+        response["n_dash"]         = fix.get("n_dash", 0)
+        response["n_line"]         = fix.get("n_line", 0)
     else:
         response["fix_error"] = fix.get("error", "Fix failed")
 
