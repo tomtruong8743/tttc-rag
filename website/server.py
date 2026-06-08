@@ -32,9 +32,9 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
+from jinja2 import Environment, FileSystemLoader
 
 from answer import generate_answer
 from ingest import extract_text, chunk_text, EMBEDDING_MODEL, COLLECTION_NAME, CHROMA_DIR
@@ -55,13 +55,13 @@ app = FastAPI(title="VIFC Knowledge Assistant")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "vifc-secret-key-change-me"))
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-# Disable Jinja2 caching to prevent Railway issues
-from jinja2 import Environment, FileSystemLoader
-env = Environment(
-    loader=FileSystemLoader(BASE_DIR / "templates"),
-    cache_size=0  # Disable caching
-)
-templates = Jinja2Templates(env=env)
+# Use raw Jinja2 to avoid Starlette's caching issues on Railway
+jinja_env = Environment(loader=FileSystemLoader(str(BASE_DIR / "templates")))
+
+def render_template(name: str, context: dict) -> str:
+    """Render a template and return HTML string."""
+    template = jinja_env.get_template(name)
+    return template.render(**context)
 
 PENDING.mkdir(parents=True, exist_ok=True)
 REJECTED.mkdir(parents=True, exist_ok=True)
@@ -92,7 +92,7 @@ class Question(BaseModel):
 
 @app.get("/")
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return HTMLResponse(render_template("index.html", {"request": request}))
 
 @app.post("/ask")
 async def ask(body: Question):
@@ -123,7 +123,7 @@ async def ask(body: Question):
 
 @app.get("/upload")
 async def upload_page(request: Request):
-    return templates.TemplateResponse("upload.html", {"request": request})
+    return HTMLResponse(render_template("upload.html", {"request": request}))
 
 @app.post("/upload")
 async def upload_document(
@@ -160,10 +160,10 @@ async def upload_document(
     }
     save_meta(meta)
 
-    return templates.TemplateResponse("upload.html", {
+    return HTMLResponse(render_template("upload.html", {
         "request": request,
         "success": f"'{file.filename}' submitted successfully. It will be reviewed before being added to the database."
-    })
+    }))
 
 
 # ── Admin Login ───────────────────────────────────────────────────
@@ -184,17 +184,17 @@ async def admin_verify(request: Request, body: PasswordCheck):
 async def admin_login_page(request: Request):
     if is_admin(request):
         return RedirectResponse("/admin/review")
-    return templates.TemplateResponse("admin_login.html", {"request": request})
+    return HTMLResponse(render_template("admin_login.html", {"request": request}))
 
 @app.post("/admin/login")
 async def admin_login(request: Request, password: str = Form(...)):
     if password == ADMIN_PASSWORD:
         request.session["is_admin"] = True
         return RedirectResponse("/admin/review", status_code=303)
-    return templates.TemplateResponse("admin_login.html", {
+    return HTMLResponse(render_template("admin_login.html", {
         "request": request,
         "error": "Incorrect password."
-    })
+    }))
 
 @app.get("/admin/logout")
 async def admin_logout(request: Request):
@@ -225,10 +225,10 @@ async def admin_review(request: Request):
             "size_kb": info.get("size_kb", "?"),
         })
 
-    return templates.TemplateResponse("admin_review.html", {
+    return HTMLResponse(render_template("admin_review.html", {
         "request": request,
         "pending_files": pending_files,
-    })
+    }))
 
 @app.post("/admin/approve")
 async def admin_approve(request: Request, filename: str = Form(...)):
