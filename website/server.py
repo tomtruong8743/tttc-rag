@@ -54,7 +54,14 @@ ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD", "vifc-admin-2026")
 app = FastAPI(title="VIFC Knowledge Assistant")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "vifc-secret-key-change-me"))
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+# Disable Jinja2 caching to prevent Railway issues
+from jinja2 import Environment, FileSystemLoader
+env = Environment(
+    loader=FileSystemLoader(BASE_DIR / "templates"),
+    cache_size=0  # Disable caching
+)
+templates = Jinja2Templates(env=env)
 
 PENDING.mkdir(parents=True, exist_ok=True)
 REJECTED.mkdir(parents=True, exist_ok=True)
@@ -309,5 +316,5 @@ if __name__ == "__main__":
     print(f"[info] LLM backend: {llm_client.backend_info()}")
     print(f"[info] Admin password: {ADMIN_PASSWORD}")
     print(f"[info] Set ADMIN_PASSWORD env var to change it.")
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True,
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False,
                 app_dir=str(BASE_DIR))
