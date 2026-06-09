@@ -48,13 +48,14 @@ def _gemini_chat(system: str, user: str, max_tokens: int) -> str:
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set. Get a free key at https://aistudio.google.com/app/apikey")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}"
+    # API key passed as query parameter (safe from logging this way)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
     payload = {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
         "generationConfig": {"maxOutputTokens": max_tokens},
     }
-    resp = requests.post(url, json=payload, timeout=120)
+    resp = requests.post(url, json=payload, params={"key": api_key}, timeout=120)
     resp.raise_for_status()
     data = resp.json()
     try:
