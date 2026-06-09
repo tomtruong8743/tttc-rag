@@ -105,7 +105,7 @@ def approve_all(base_url: str, admin_password: str, filenames: list):
                 resp = session.post(approve_url,
                                    data={"filename": filename},
                                    timeout=60)
-                if resp.status_code == 303 or "review" in resp.url:
+                if resp.status_code in (200, 303) or "/admin/review" in str(resp.url):
                     print(f"  ✅ Approved: {filename}")
                     approved += 1
                 else:
