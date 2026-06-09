@@ -77,39 +77,60 @@ def approve_all(base_url: str, admin_password: str, filenames: list):
     """Auto-approve uploaded documents."""
 
     try:
-        # Login to admin
+        # Login to admin — disable redirects so we can inspect the 303 response
+        # and confirm the session cookie was actually set before proceeding.
         login_url = urljoin(base_url, "/admin/login")
         session = requests.Session()
 
-        resp = session.post(login_url, data={"password": admin_password}, timeout=30)
-        if "Incorrect" in resp.text:
-            print("❌ Admin password incorrect")
+        resp = session.post(
+            login_url,
+            data={"password": admin_password},
+            timeout=30,
+            allow_redirects=False,
+        )
+
+        # A successful login returns 303 → /admin/review with a session cookie.
+        # Any other status (200 with the login page, 4xx, etc.) means login failed.
+        if resp.status_code != 303:
+            print(f"❌ Admin login failed (expected 303 redirect, got {resp.status_code})")
+            if "Incorrect" in resp.text:
+                print("   Reason: incorrect password")
             return
 
-        print("✅ Admin login successful")
+        # Verify the session cookie was actually set by the server.
+        session_cookie = session.cookies.get("session")
+        if not session_cookie:
+            print("❌ Admin login appeared to succeed but no session cookie was received")
+            return
 
-        # Get list of pending files
+        print("✅ Admin login successful (session cookie confirmed)")
+
+        # Get list of pending files to confirm admin access is working.
         review_url = urljoin(base_url, "/admin/review")
         resp = session.get(review_url, timeout=30)
 
         if resp.status_code != 200:
-            print("❌ Could not access admin review page")
+            print(f"❌ Could not access admin review page (status {resp.status_code})")
             return
 
-        # Approve each file
+        # Approve each file — disable redirects so we detect the 303 that
+        # signals a successful approval rather than the followed final page.
         approve_url = urljoin(base_url, "/admin/approve")
         approved = 0
 
         for filename in filenames:
             try:
-                resp = session.post(approve_url,
-                                   data={"filename": filename},
-                                   timeout=60)
-                if resp.status_code == 303 or "review" in resp.url:
+                resp = session.post(
+                    approve_url,
+                    data={"filename": filename},
+                    timeout=60,
+                    allow_redirects=False,
+                )
+                if resp.status_code == 303:
                     print(f"  ✅ Approved: {filename}")
                     approved += 1
                 else:
-                    print(f"  ⚠️  {filename}: {resp.status_code}")
+                    print(f"  ⚠️  {filename}: unexpected status {resp.status_code}")
             except Exception as e:
                 print(f"  ❌ {filename}: {e}")
 
@@ -119,6 +140,7 @@ def approve_all(base_url: str, admin_password: str, filenames: list):
     except Exception as e:
         print(f"❌ Approval failed: {e}")
         print("   You can manually approve documents in the Admin panel")
+
 
 
 if __name__ == "__main__":
