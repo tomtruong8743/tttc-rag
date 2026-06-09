@@ -76,16 +76,32 @@ def bulk_upload_wikis(base_url: str, admin_password: str):
 
 
 def approve_all(base_url: str, admin_password: str, filenames: list):
-    """Auto-approve uploaded wiki files."""
+    """Auto-approve uploaded wiki files with proper session handling."""
 
     try:
-        # Login to admin
-        login_url = urljoin(base_url, "/admin/login")
         session = requests.Session()
 
-        resp = session.post(login_url, data={"password": admin_password}, timeout=30)
-        if "Incorrect" in resp.text:
+        # Login with allow_redirects=False to inspect the raw response
+        login_url = urljoin(base_url, "/admin/login")
+        print(f"  Logging in to {login_url}...")
+
+        resp = session.post(login_url,
+                           data={"password": admin_password},
+                           timeout=30,
+                           allow_redirects=False)
+
+        # Check login response (should be 303 redirect)
+        if resp.status_code == 401 or "Incorrect" in resp.text:
             print("❌ Admin password incorrect")
+            return
+
+        if resp.status_code not in (200, 303, 302):
+            print(f"❌ Login failed with status {resp.status_code}")
+            return
+
+        # Verify session cookie was set
+        if not session.cookies:
+            print("❌ No session cookie received from login")
             return
 
         print("✅ Admin login successful")
@@ -96,22 +112,35 @@ def approve_all(base_url: str, admin_password: str, filenames: list):
 
         for filename in filenames:
             try:
+                # Use allow_redirects=False to see the 303 response
                 resp = session.post(approve_url,
                                    data={"filename": filename},
-                                   timeout=60)
-                if resp.status_code == 303 or "review" in resp.url:
+                                   timeout=60,
+                                   allow_redirects=False)
+
+                # Success responses: 303 (redirect) or 200
+                if resp.status_code in (200, 303):
                     print(f"  ✅ Approved: {filename}")
                     approved += 1
+                elif resp.status_code == 404:
+                    print(f"  ⚠️  {filename}: File not found (already approved?)")
+                elif resp.status_code == 403:
+                    print(f"  ❌ {filename}: Not authenticated")
                 else:
-                    print(f"  ⚠️  {filename}: {resp.status_code}")
+                    print(f"  ⚠️  {filename}: Status {resp.status_code}")
             except Exception as e:
                 print(f"  ❌ {filename}: {e}")
 
         print(f"\n✅ Successfully approved {approved}/{len(filenames)} wiki files")
-        print("📚 Wikis are now part of the knowledge base!")
+        if approved == len(filenames):
+            print("📚 All wikis are now part of the knowledge base!")
+        else:
+            print(f"⚠️  {len(filenames) - approved} files were not approved")
 
     except Exception as e:
         print(f"❌ Approval failed: {e}")
+        import traceback
+        traceback.print_exc()
         print("   You can manually approve files in the Admin panel")
 
 
