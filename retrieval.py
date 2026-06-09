@@ -7,7 +7,8 @@ from pathlib import Path
 import chromadb
 from chromadb.utils import embedding_functions
 
-CHROMA_DIR = Path("chroma_db")
+# Must match the path used in ingest.py and server.py — store in persistent volume
+CHROMA_DIR = Path("data/chroma_db")
 COLLECTION_NAME = "documents"
 DEFAULT_TOP_K = 5
 
